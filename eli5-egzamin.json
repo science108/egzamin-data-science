@@ -1,0 +1,759 @@
+{
+  "sections": [
+    {
+      "title": "1. Wprowadzenie do systemu UNIX",
+      "items": [
+        {
+          "term": "PAM (moduły uwierzytelniania)",
+          "eli5": "To ochroniarz przy drzwiach, który sprawdza czy możesz wejść. Fajne jest to, że możesz mu wymieniać sposób sprawdzania (hasło, odcisk palca) jak klocki, bez przebudowywania całego domu. Ma 4 zadania: sprawdź kim jesteś, czy masz wstęp, zmiana hasła, i posprzątaj po wyjściu.",
+          "more": "**Najprościej:** PAM to ochroniarz przy drzwiach, którego sposób sprawdzania możesz wymieniać jak klocki — bez przebudowywania całego budynku (aplikacji).\n\n**Po co to jest?** Kiedyś każdy program (login, ssh) sam sprawdzał hasło. PAM wyciąga to na zewnątrz: program pyta PAM „wpuścić?\", a PAM sam decyduje wg konfiguracji z `/etc/pam.d/`.\n\n**4 typy modułów (co sprawdzają):**\n- **auth** — kim jesteś (hasło, odcisk palca)\n- **account** — czy konto jest ważne, godziny dostępu\n- **password** — zmiana hasła\n- **session** — sprzątanie na wejściu/wyjściu (np. montowanie katalogu)\n\n**Flagi kontrolne** decydują, jak ważny jest wynik modułu: `required`, `requisite`, `sufficient`, `optional`.\n\n**⚠️ Na egzaminie:** PAM = elastyczność bez rekompilacji aplikacji. Znaj 4 typy i flagi."
+        },
+        {
+          "term": "System plików / i-węzeł (inode)",
+          "eli5": "Wyobraź sobie wielkie drzewo z jednym pniem (/). Każdy plik ma metryczkę (inode) z informacjami: kto właściciel, jak duży — ale bez imienia! Imię pliku jest zapisane osobno w katalogu, jak wizytówka przyklejona do metryczki.",
+          "more": "**Najprościej:** wielkie drzewo z jednym pniem `/`. Każdy plik ma metryczkę (inode), a jego imię wisi osobno.\n\n**Inode (i-węzeł)** to dowód osobisty pliku: właściciel, prawa, rozmiar, wskaźniki na bloki danych — **ale NIE nazwa**.\n\n**Nazwa** żyje w katalogu, który jest zwykłą tablicą par `nazwa → numer inode`. Dlatego jeden plik (inode) może mieć wiele nazw.\n\n**Typy plików:** zwykły, katalog, dowiązanie, urządzenie znakowe/blokowe, potok (FIFO), gniazdo.\n\n**⚠️ Na egzaminie:** inode NIE zawiera nazwy pliku — nazwa jest w katalogu."
+        },
+        {
+          "term": "Dowiązania (hard link / symlink)",
+          "eli5": "Hard link to dwa różne imiona tej samej osoby — obie prowadzą do tego samego człowieka. Symlink to karteczka z napisem 'ta osoba mieszka tam →', czyli tylko wskazówka do adresu.",
+          "more": "**Najprościej:** to dwa sposoby, żeby plik miał „drugie imię\".\n\n**Hard link (twarde)** — kolejna nazwa wskazująca **ten sam inode**. Jak dwa imiona tej samej osoby: usuniesz jedno, osoba dalej żyje pod drugim. Działa tylko w obrębie **jednego systemu plików**.\n\n**Symlink (miękkie)** — malutki plik zawierający **ścieżkę** do celu: karteczka „idź tam →\". Może wskazywać na inny dysk, ale jak usuniesz cel, karteczka wisi w próżnię (martwe dowiązanie).\n\n**⚠️ Na egzaminie:** hard link nie przekracza granicy systemu plików, symlink tak; symlink pokazuje ścieżkę, hard link ten sam inode."
+        },
+        {
+          "term": "ACL (listy kontroli dostępu)",
+          "eli5": "Zwykłe prawa mówią tylko: właściciel, jego grupa, i cała reszta. ACL to lista gości VIP — możesz dopisać dokładnie: 'Ania też może, a Tomek nie', dla konkretnych osób.",
+          "more": "**Najprościej:** zwykłe prawa `rwx` znają tylko trzy grupy: właściciel, jego grupa, cała reszta. ACL to lista gości VIP.\n\n**Problem:** co jeśli chcesz dać dostęp Ani, ale NIE Tomkowi z tej samej grupy? Zwykłe prawa tego nie umieją.\n\n**ACL** pozwala dopisać uprawnienia dla **konkretnych** użytkowników i grup, niezależnie od klasycznej trójki. Polecenia: `getfacl`, `setfacl`.\n\n**Maska** ogranicza maksymalne prawa dla wpisów rozszerzonych (sufit uprawnień).\n\n**⚠️ Na egzaminie:** ACL = drobnoziarnista kontrola przekraczająca model owner/group/other."
+        },
+        {
+          "term": "Quota (kontyngenty)",
+          "eli5": "To limit miejsca w szafie. Miękki limit (soft) to 'trochę możesz przekroczyć na chwilę', a twardy (hard) to 'ani centymetra więcej!'. Liczy się i miejsce (bloki), i liczba rzeczy (pliki).",
+          "more": "**Najprościej:** limit miejsca w szafie, żeby jeden użytkownik nie zajął całego dysku.\n\n**Co się liczy (dwa rodzaje):**\n- **bloki** — ile miejsca (przestrzeń)\n- **i-węzły** — ile plików\n\n**Dwa progi:**\n- **miękki (soft)** — możesz przekroczyć na chwilę, w okresie karencji (grace period)\n- **twardy (hard)** — ściana, ani bajta więcej\n\n**⚠️ Na egzaminie:** soft można chwilowo przekroczyć, hard nigdy; quota liczy i bloki, i inody."
+        },
+        {
+          "term": "Tryb użytkownika i jądra (syscall)",
+          "eli5": "Ty (program) nie możesz sam wejść do kuchni restauracji. Prosisz kelnera (jądro) przez wywołanie systemowe, a on przynosi ci to, czego chcesz. To przejście do kuchni i z powrotem trochę kosztuje czasu.",
+          "more": "**Najprościej:** ty (program) nie wchodzisz do kuchni — prosisz kelnera (jądro), a on obsługuje.\n\n**Dwa tryby:**\n- **user mode** — twój program, ograniczone prawa\n- **kernel mode** — jądro, pełen dostęp do sprzętu\n\n**Wywołanie systemowe (syscall)** to prośba do jądra (czytaj plik, otwórz sieć). Powoduje **przełączenie kontekstu** user → kernel i z powrotem.\n\n**Kontekst procesu** = stan rejestrów, licznik rozkazów, stos, mapa pamięci. Przełączanie kontekstu zapisuje/odtwarza ten stan — i **kosztuje** czas.\n\n**⚠️ Na egzaminie:** syscall = przejście user→kernel; przełączenie kontekstu nie jest darmowe."
+        },
+        {
+          "term": "Priorytet procesu (nice)",
+          "eli5": "To miejsce w kolejce do zjeżdżalni. Wartość 'nice' działa na odwrót: im grzeczniejszy jesteś (wyższe nice), tym bardziej przepuszczasz innych. Zwykły użytkownik może tylko być grzeczniejszy, nie może się wpychać.",
+          "more": "**Najprościej:** miejsce w kolejce do procesora. Wartość `nice` działa **na odwrót** niż intuicja.\n\n**Skala nice:** od **-20** (najwyższy priorytet, „wpycham się\") do **+19** (najniższy, „przepuszczam wszystkich\").\n\n**Zasada:** im **niższa** wartość nice, tym **wyższy** priorytet.\n\n**Kto może co:** zwykły użytkownik może tylko być grzeczniejszy (zwiększać nice = obniżać priorytet). Podniesienie priorytetu wymaga uprawnień. Polecenia: `nice`, `renice`.\n\n**⚠️ Na egzaminie:** niższy nice = wyższy priorytet; użytkownik bez roota nie podniesie priorytetu."
+        },
+        {
+          "term": "IPC (komunikacja między procesami)",
+          "eli5": "To sposoby, jak dwa programy do siebie gadają: rurką (pipe), wspólną tablicą korkową (pamięć dzielona — najszybsza!), listami (kolejki) albo krótkim gwizdkiem (sygnał, przenosi malutko informacji).",
+          "more": "**Najprościej:** sposoby, jak dwa programy do siebie gadają.\n\n**Główne mechanizmy:**\n- **potok (pipe)** — jednokierunkowa rura, między spokrewnionymi procesami\n- **FIFO (potok nazwany)** — rura między dowolnymi procesami\n- **kolejka komunikatów** — skrzynka na listy\n- **pamięć dzielona** — wspólna tablica korkowa, **najszybsza** (brak kopiowania), ale wymaga własnej synchronizacji\n- **semafory** — do synchronizacji (kto ma dostęp)\n- **gniazda (sockets)** — także przez sieć\n- **sygnały** — krótkie „puknięcie\", przenoszą bardzo mało informacji\n\n**⚠️ Na egzaminie:** pamięć dzielona najszybsza, ale sam pilnujesz porządku; sygnał niesie minimum informacji."
+        },
+        {
+          "term": "LDAP",
+          "eli5": "To wielka książka telefoniczna firmy, ułożona jak drzewo. Świetnie się w niej szuka (dużo czytania), ale rzadko coś się w niej zmienia.",
+          "more": "**Najprościej:** wielka książka telefoniczna firmy, ułożona jak drzewo.\n\n**Co przechowuje:** informacje o użytkownikach, grupach, zasobach — w strukturze drzewa (**DIT**).\n\n**Jak identyfikujemy wpis:** przez **DN (Distinguished Name)** — pełną ścieżkę w drzewie. Wpis opisany atrybutami wg schematu.\n\n**Zoptymalizowany pod ODCZYT** — dużo czytania, mało zapisów (jak książka adresowa, którą rzadko się zmienia).\n\n**Zastosowanie:** scentralizowane logowanie, książki adresowe.\n\n**⚠️ Na egzaminie:** LDAP = katalog, hierarchia, DN, szybki odczyt."
+        },
+        {
+          "term": "Kerberos",
+          "eli5": "To system biletów jak w wesołym miasteczku. Pokazujesz raz hasło i dostajesz bilet, a potem tym biletem wchodzisz na wszystkie karuzele — bez powtarzania hasła. Ważne: wszystkie zegary muszą chodzić tak samo.",
+          "more": "**Najprościej:** system biletów jak w wesołym miasteczku — pokazujesz hasło raz, dostajesz bilet i nim wchodzisz na wszystkie karuzele.\n\n**Jak to działa (krok po kroku):**\n1. Logujesz się do **KDC** (centrum, = AS + TGS)\n2. Dostajesz **TGT** — bilet „na bilety\"\n3. TGT-em prosisz o bilety do konkretnych usług\n4. Usługa ufa biletowi — **hasło nigdy nie wędruje przez sieć**\n\nOpiera się na **kluczach symetrycznych** i **znacznikach czasu** (dlatego zegary muszą być zsynchronizowane).\n\n**Zastosowanie:** Single Sign-On, Active Directory.\n\n**⚠️ Na egzaminie:** bilety, KDC, klucze symetryczne, wymóg zsynchronizowanych zegarów."
+        }
+      ]
+    },
+    {
+      "title": "2. Wstęp do informatyki",
+      "items": [
+        {
+          "term": "EBNF (notacja gramatyki)",
+          "eli5": "To przepis na budowanie zdań w języku programowania. Nawiasy mają znaczenie: [] = coś opcjonalnego (możesz pominąć), {} = powtarzaj ile chcesz, | = wybierz jedno albo drugie.",
+          "more": "**Najprościej:** przepis, jak budować poprawne zdania w języku programowania.\n\n**Znaczenie nawiasów (to najczęściej pytają):**\n- `[ ... ]` — opcjonalne (możesz pominąć)\n- `{ ... }` — powtórzenie 0 lub więcej razy\n- `( ... )` — grupowanie\n- `|` — alternatywa (wybierz jedno)\n\n**Reguły produkcji** definiują symbole **nieterminalne** (do rozwinięcia) przez **terminalne** (gotowe znaki).\n\n**⚠️ Na egzaminie:** `{}` = powtórzenie, `[]` = opcjonalne — nie pomyl ich."
+        },
+        {
+          "term": "Składnia, semantyka, pragmatyka",
+          "eli5": "Składnia to poprawna pisownia zdania. Semantyka to czy zdanie ma sens. Pragmatyka to po co je w ogóle mówisz. Zdanie 'Zielone sny śpią gniewnie' jest poprawne, ale bez sensu — dobra składnia, zła semantyka.",
+          "more": "**Najprościej:** trzy pytania o zdanie: czy dobrze zapisane, czy ma sens, po co je mówisz.\n\n**1. Składnia (syntax) —** forma zapisu (poprawna „pisownia\" i gramatyka kodu).\n**2. Semantyka —** znaczenie konstrukcji (co program właściwie robi).\n**3. Pragmatyka —** sposób i cel użycia (po co, w jakim kontekście).\n\n**Przykład:** `x = \"tekst\" + 5` może być poprawne składniowo, ale bez sensu semantycznie.\n\n**⚠️ Na egzaminie:** składnia ≠ semantyka — program poprawny składniowo może być bez sensu."
+        },
+        {
+          "term": "Zabezpieczenia przed błędami",
+          "eli5": "To barierki chroniące przed wypadkami w kodzie: sprawdzanie typów (nie wolno mieszać jabłek z liczbami), pilnowanie granic tablicy, łapanie wyjątków. Im wcześniej złapiesz błąd, tym lepiej.",
+          "more": "**Najprościej:** barierki, które łapią wpadki w kodzie, najlepiej jak najwcześniej.\n\n**Główne mechanizmy:**\n- **kontrola typów** (silne/statyczne typowanie) — nie zmieszasz liczby z tekstem\n- **kontrola zakresów tablic** — nie wyjdziesz poza koniec\n- **obsługa wyjątków** — łapiesz błąd, zamiast się wywalić\n- **inicjalizacja zmiennych**, **hermetyzacja**, `const`/niemodyfikowalność\n- sprawdzanie zgodności argumentów funkcji\n\n**⚠️ Na egzaminie:** silne typowanie wychwytuje błędy wcześniej; brak kontroli granic tablic = klasyczne źródło błędów w C."
+        },
+        {
+          "term": "Procedury i funkcje",
+          "eli5": "To sposiekanie wielkiego zadania na małe, nazwane kawałki, które możesz używać wiele razy. Nie po to, żeby było szybciej, tylko żeby było czytelniej i bez powtarzania się (funkcja coś zwraca, procedura po prostu coś robi).",
+          "more": "**Najprościej:** siekanie wielkiego zadania na małe, nazwane kawałki, których używasz wiele razy.\n\n**Po co to (główne cele):**\n- **modularność** — dziel i panuj\n- **reużywalność** — nie powtarzaj się (zasada **DRY**)\n- **abstrakcja** — ukryj szczegóły za nazwą\n- **czytelność** i łatwiejsze testowanie/utrzymanie\n\n**Różnica:** **funkcja** zwraca wartość, **procedura** wykonuje działanie.\n\n**⚠️ Na egzaminie:** główny cel to dekompozycja i reużywalność — NIE „przyspieszenie programu\"."
+        },
+        {
+          "term": "Typy numeryczne (int, float)",
+          "eli5": "Liczby całkowite (int) są jak klocki — dokładne i policzalne. Liczby zmiennoprzecinkowe (float) są jak miarka z gumy — mają ograniczoną dokładność, dlatego 0.1 nie jest zapisane idealnie.",
+          "more": "**Najprościej:** liczby całkowite są jak klocki (dokładne), zmiennoprzecinkowe jak gumowa miarka (przybliżone).\n\n**Całkowite (int):** ze znakiem lub bez, różne rozmiary. W swoim zakresie **dokładne**.\n\n**Zmiennoprzecinkowe (float/double, IEEE 754):** mają **skończoną precyzję** → błędy zaokrągleń. Nie zapiszą idealnie wielu ułamków dziesiętnych.\n\n**Przykład:** `0.1 + 0.2` w komputerze to nie dokładnie `0.3`.\n\n**⚠️ Na egzaminie:** float ≠ dokładna reprezentacja ułamków dziesiętnych."
+        },
+        {
+          "term": "Typy strukturalne",
+          "eli5": "Struktura to plecak z różnymi rzeczami w środku (imię, wiek, wzrost — różne typy). Tablica to pudełko na jajka — same jednakowe komórki tego samego rodzaju.",
+          "more": "**Najprościej:** pudełka na dane — jedne mieszają różne rzeczy, inne trzymają same jednakowe.\n\n**Rekord / struktura —** pola **różnych** typów (imię, wiek, wzrost). **Heterogeniczna.**\n**Tablica —** elementy **tego samego** typu, jak pudełko na jajka. **Homogeniczna.**\nInne: unia, zbiór, lista.\n\n**Po co:** grupować powiązane dane w jedną całość.\n\n**⚠️ Na egzaminie:** struktura = heterogeniczna, tablica = homogeniczna."
+        },
+        {
+          "term": "UTF-8 (kodowanie znaków)",
+          "eli5": "To sposób zapisu liter w komputerze o zmiennej długości. Zwykłe angielskie literki mieszczą się w 1 bajcie, a 'ą' czy emoji potrzebują więcej bajtów (do 4). Bajt, który jest 'ciągiem dalszym', zaczyna się od 10.",
+          "more": "**Najprościej:** sposób zapisu liter w komputerze o **zmiennej długości** (1–4 bajty na znak).\n\n**Jak to działa:**\n- ASCII (0–127) — **1 bajt** (zgodność wsteczna, zwykłe angielskie litery)\n- znaki spoza ASCII (np. `ą`, emoji) — 2, 3 lub 4 bajty\n\n**Rozpoznawanie bajtów:** bajt wiodący zaczyna się od `110…`/`1110…`/`11110…` (mówi ile bajtów), bajty kontynuacji od `10…`.\n\n**⚠️ Na egzaminie:** UTF-8 jest zmiennobajtowe, zgodne z ASCII na 1 bajcie; bajt kontynuacji zaczyna się od `10`."
+        },
+        {
+          "term": "Przekazywanie parametrów",
+          "eli5": "Przez wartość = dajesz koledze kserokopię — bazgrze po niej, a twój oryginał zostaje czysty. Przez referencję = dajesz oryginał — jak on go pomaże, ty też będziesz miał pomazany.",
+          "more": "**Najprościej:** dajesz koledze kserokopię albo oryginał.\n\n**Przez wartość (by value) —** kopia argumentu. Kolega bazgrze po kserze, twój oryginał czysty. Zmiany **nie** wychodzą na zewnątrz.\n\n**Przez referencję/wskaźnik (by reference) —** dostęp do oryginału. Zmiany **widoczne** na zewnątrz.\n\nInne: przez wynik, przez wartość-wynik, przez nazwę (leniwe).\n\n**⚠️ Na egzaminie:** by value nie zmienia oryginału; w C tablice przekazywane efektywnie „przez wskaźnik\"."
+        },
+        {
+          "term": "Lambda w Pythonie",
+          "eli5": "To malutka funkcja bez imienia, jednorazówka, którą piszesz w locie: 'weź x, oddaj x+1'. Musi być jednolinijkowa i od razu zwraca wynik.",
+          "more": "**Najprościej:** malutka funkcja bez imienia, jednorazówka pisana w locie.\n\n**Zapis:** `lambda x: x + 1` — weź `x`, oddaj `x+1`.\n\n**Gdzie się używa:** jako krótki argument do `map`, `filter`, `sorted(key=...)`.\n\n**Ograniczenia:** tylko **jedno wyrażenie**, brak instrukcji (pętli, przypisań), brak `return` (wynik wyrażenia jest zwracany automatycznie).\n\n**⚠️ Na egzaminie:** lambda zwraca wartość wyrażenia bez `return`; nie zawiera pętli ani przypisań."
+        },
+        {
+          "term": "Rekurencja",
+          "eli5": "To funkcja, która woła samą siebie — jak lustro odbijające się w drugim lustrze. Musi mieć STOP (warunek końcowy), inaczej odbijałoby się w nieskończoność.",
+          "more": "**Najprościej:** funkcja, która woła samą siebie — jak lustro w lustrze.\n\n**Dwie części każdej rekurencji:**\n1. **Warunek bazowy (STOP)** — najprostszy przypadek, bez wołania siebie\n2. **Krok rekurencyjny** — wołanie siebie na **mniejszym** problemie\n\n**Przykład (schody):** żeby zejść z 10 stopni → zejdź o 1, potem rozwiąż „jak zejść z 9\". Aż dojdziesz do 0 (STOP).\n\n**Uwaga:** brak warunku STOP = nieskończone wołanie i przepełnienie stosu.\n\n**⚠️ Na egzaminie:** każda rekurencja musi mieć przypadek bazowy."
+        }
+      ]
+    },
+    {
+      "title": "3. Algorytmy i struktury danych",
+      "items": [
+        {
+          "term": "Złożoność sortowań",
+          "eli5": "To ile pracy trzeba, żeby ułożyć klocki po kolei. Powolne sposoby (bąbelkowe) to O(n²) — mnóstwo porównań. Mądre (merge, quicksort) to O(n log n). Żaden sposób porównujący nie zejdzie poniżej n log n — to ściana.",
+          "more": "**Najprościej:** ile pracy trzeba, żeby ułożyć klocki po kolei — jedne metody są mądre, inne mozolne.\n\n**Wolne — `O(n²)`:** bąbelkowe, przez wstawianie, przez wybór. Dużo porównań, dobre tylko dla małych danych.\n\n**Szybkie — `O(n log n)`:**\n- **merge sort** — zawsze `n log n`, **stabilne**, ale potrzebuje dodatkowej pamięci\n- **quicksort** — średnio `n log n`, w miejscu, ale **pesymistycznie `n²`**\n- **heapsort** — `n log n` w miejscu, niestabilne\n\n**Ściana:** żadne sortowanie **porównaniowe** nie zejdzie poniżej `Ω(n log n)`.\n**Wyjątek:** sortowania pozycyjne (counting/radix) robią `O(n)`, ale tylko przy założeniach o kluczach (nie porównują).\n\n**⚠️ Na egzaminie:** dolna granica porównaniowych = `n log n`; quicksort pesymistycznie `n²`."
+        },
+        {
+          "term": "Algorytmy zachłanne (greedy)",
+          "eli5": "To 'bierz zawsze to, co teraz wygląda najlepiej' i nigdy się nie cofaj — jak łakomczuch. Czasem to daje najlepszy wynik (Huffman), ale czasem nie (plecak, gdzie trzeba pomyśleć naprzód).",
+          "more": "**Najprościej:** łakomczuch — w każdym kroku bierze to, co teraz wygląda najlepiej, i nigdy się nie cofa.\n\n**Jak działa:** `WYBIERZ lokalnie najlepsze → nie cofaj → powtarzaj`.\n\n**Kiedy daje optimum:** gdy problem ma **własność wyboru zachłannego** i **optymalną podstrukturę**.\n\n**Działa (optimum):** kod Huffmana, drzewo rozpinające (Kruskal), wydawanie reszty w „ładnych\" systemach monet.\n**Nie działa:** plecak 0/1 (tu trzeba pomyśleć naprzód — programowanie dynamiczne).\n\n**⚠️ Na egzaminie:** zachłanny NIE zawsze daje optimum globalne; Huffman i MST — tak."
+        },
+        {
+          "term": "Najkrótsze ścieżki (Dijkstra, Bellman-Ford)",
+          "eli5": "To znajdowanie najtańszej drogi na mapie. Dijkstra jest szybki, ale nie znosi ujemnych kosztów. Bellman-Ford radzi sobie z ujemnymi. Floyd-Warshall liczy drogi między WSZYSTKIMI parami miast naraz.",
+          "more": "**Najprościej:** szukanie najtańszej drogi na mapie — trzy różne narzędzia do trzech sytuacji.\n\n**1. Dijkstra —** jedno źródło, **wagi nieujemne**, zachłanny. Szybki: `O((V+E) log V)` z kopcem.\n**2. Bellman-Ford —** dopuszcza **wagi ujemne**, wykrywa ujemne cykle. Wolniejszy: `O(V·E)`.\n**3. Floyd-Warshall —** **wszystkie pary** naraz, programowanie dynamiczne: `O(V³)`.\n\n**⚠️ Na egzaminie:** Dijkstra NIE działa dla ujemnych wag; Floyd-Warshall = wszystkie pary."
+        },
+        {
+          "term": "Techniki projektowania algorytmów",
+          "eli5": "Sposoby rozwiązywania problemów: dziel i zwyciężaj (potnij na kawałki), programowanie dynamiczne (zapamiętuj wyniki, żeby nie liczyć dwa razy), zachłanny (bierz najlepsze teraz), backtracking (próbuj i cofaj się).",
+          "more": "**Najprościej:** to różne sposoby myślenia o rozwiązaniu problemu. Zależnie od problemu — labirynt, klocki czy pudełko cukierków — wybierasz inną strategię.\n\n**1. Brute force — „sprawdzę wszystko\"**\nMasz 10 kluczy i nie wiesz który pasuje — próbujesz każdego. **Idea:** sprawdź wszystkie możliwości. **+** proste i pewne, **−** bywa bardzo wolne.\n\n**2. Dziel i zwyciężaj — „podziel duży problem\"**\nWielka sterta klocków: dzielisz na dwie, porządkujesz każdą, łączysz. **Idea:** `PODZIEL → ROZWIĄŻ → POŁĄCZ`. Przykład: merge sort, wyszukiwanie binarne.\n\n**3. Zachłanny — „biorę najlepsze teraz\"**\nWydajesz 8 zł: bierzesz największą pasującą monetę, potem kolejną. **Idea:** w każdym kroku wybierz to, co teraz najlepsze. **⚠️** lokalnie najlepsze ≠ zawsze globalnie najlepsze.\n\n**4. Programowanie dynamiczne — „zapamiętuję, co policzyłem\"**\nTa sama zagadka drugi raz? Zaglądasz do notatek zamiast liczyć od nowa. **Idea:** `rozbij → rozwiąż mniejsze → zapamiętaj → używaj ponownie`. Przykład: Fibonacci, plecak.\n\n**5. Backtracking — „spróbuję, a jak źle to się cofnę\"**\nLabirynt: wybierasz drogę, ślepa uliczka → wracasz do skrzyżowania. **Idea:** `WYBIERZ → SPRAWDŹ → jeśli źle: COFNIJ`. Przykład: Sudoku, hetmany.\n\n**6. Zamiatanie / redukcja —** przesuwasz „miotłę\" przez dane (geometria) albo sprowadzasz problem do już rozwiązanego.\n\n**⚠️ Na egzaminie:** DP dla **nakładających się** podproblemów; dziel-i-zwyciężaj dla **niezależnych**."
+        },
+        {
+          "term": "Reprezentacja grafów",
+          "eli5": "Graf to mapa z kropkami i liniami. Macierz sąsiedztwa to wielka tabela 'kto z kim' — szybko sprawdzisz połączenie, ale zajmuje dużo miejsca. Lista sąsiedztwa to notatka 'kto ma jakich sąsiadów' — oszczędna, gdy połączeń jest mało.",
+          "more": "**Najprościej:** graf to mapa z kropkami (wierzchołki) i liniami (krawędzie). Są dwa sposoby jej zapisu.\n\n**1. Macierz sąsiedztwa —** wielka tabela „kto z kim\". Sprawdzenie krawędzi **`O(1)`**, ale zajmuje **`O(V²)`** pamięci. Dobra dla grafów **gęstych**.\n\n**2. Lista sąsiedztwa —** dla każdego wierzchołka lista jego sąsiadów. Pamięć **`O(V+E)`**, szybka iteracja po sąsiadach. Dobra dla grafów **rzadkich**.\n\n(Jest też macierz incydencji: wierzchołki × krawędzie.)\n\n**⚠️ Na egzaminie:** macierz = szybkie sprawdzenie krawędzi + dużo pamięci; lista = oszczędna dla rzadkich."
+        },
+        {
+          "term": "Maksymalny przepływ (max-flow/min-cut)",
+          "eli5": "Wyobraź sobie rury z wodą od źródła do kranu. Ile wody przepłynie maksymalnie? Tyle, ile przepuści najwęższe gardło (najcieńszy przekrój rur). Max przepływ = min przekrój.",
+          "more": "**Najprościej:** rury z wodą od źródła `s` do kranu `t` — ile wody przepłynie maksymalnie?\n\n**Sieć przepływowa:** krawędzie mają **przepustowości** (ile się zmieści).\n\n**Kluczowe twierdzenie (max-flow = min-cut):** maksymalny przepływ równa się przepustowości **najwęższego przekroju** (najcieńszego „gardła\" rozcinającego graf na część z `s` i część z `t`).\n\n**Algorytmy:** Ford-Fulkerson (ścieżki powiększające), Edmonds-Karp (BFS, `O(V·E²)`).\n\n**⚠️ Na egzaminie:** wartość max przepływu = przepustowość minimalnego przekroju."
+        },
+        {
+          "term": "Programowanie dynamiczne",
+          "eli5": "To rozwiązywanie zagadki krok po kroku, zapisując wyniki na karteczkach, żeby nie liczyć tego samego dwa razy. Zamienia bardzo wolne (wykładnicze) liczenie na szybkie.",
+          "more": "**Najprościej:** rozwiązujesz zagadkę krok po kroku i zapisujesz wyniki na karteczkach, żeby nie liczyć tego samego dwa razy.\n\n**Kiedy się nadaje (dwa warunki):**\n1. **nakładające się podproblemy** — te same mniejsze zadania wracają wielokrotnie\n2. **optymalna podstruktura** — optimum całości składa się z optimów części\n\n**Dwa style:**\n- **top-down (memoizacja)** — liczysz normalnie, ale zapamiętujesz wyniki\n- **bottom-up (tablica)** — wypełniasz tabelę od najmniejszych przypadków\n\n**Przykłady:** Fibonacci, plecak, najdłuższy wspólny podciąg, Floyd-Warshall.\n\n**⚠️ Na egzaminie:** DP zamienia koszt wykładniczy na wielomianowy dzięki zapamiętywaniu."
+        }
+      ]
+    },
+    {
+      "title": "4. Programowanie imperatywne",
+      "items": [
+        {
+          "term": "Budowa programu z kodu C",
+          "eli5": "Kod C przechodzi przez 4 stacje jak taśma produkcyjna: preprocesor (przygotowuje), kompilator (tłumaczy), asembler (robi paczkę .o), linker (skleja wszystkie paczki i biblioteki w gotowy program). Błąd 'undefined reference' = coś się nie skleiło na końcu.",
+          "more": "**Najprościej:** kod C jedzie taśmą przez 4 stacje, zanim stanie się programem.\n\n**Cztery etapy (kolejność!):**\n1. **Preprocesor** — rozwija `#include`, `#define`, dyrektywy\n2. **Kompilator** — C → asembler/kod obiektowy, sprawdza składnię\n3. **Asembler** — tworzy plik obiektowy `.o`\n4. **Linker (konsolidacja)** — skleja pliki `.o` i biblioteki w plik wykonywalny, rozwiązuje symbole\n\n**Diagnoza błędów:** błąd „undefined reference\" pojawia się na etapie **linkowania** (brakuje definicji funkcji).\n\n**⚠️ Na egzaminie:** preprocesor → kompilator → asembler → linker."
+        },
+        {
+          "term": "Tablica 2D do funkcji",
+          "eli5": "Gdy dajesz funkcji tabelę (wiersze i kolumny), musisz jej powiedzieć ile jest kolumn — inaczej nie policzy, gdzie leży dana kratka. Liczbę wierszy można pominąć.",
+          "more": "**Najprościej:** dając funkcji tabelę (wiersze i kolumny), musisz jej zdradzić liczbę kolumn.\n\n**Dlaczego:** w C tablica „rozpada się\" (decay) do wskaźnika. Żeby policzyć adres kratki `a[i][j]`, kompilator musi znać **liczbę kolumn** `N`.\n\n**Zapis:** `void f(int a[][N])` albo `int (*a)[N]`. Alternatywnie: wskaźnik + wymiary podane jawnie.\n\n**⚠️ Na egzaminie:** rozmiar **pierwszego** wymiaru można pominąć, **drugiego (i dalszych) — nie**."
+        },
+        {
+          "term": "Tablice VLA",
+          "eli5": "To tablica, której rozmiar poznajesz dopiero w trakcie działania programu. Leży na stosie (podręcznej półce) — wygodna, ale jak poprosisz o za dużą, półka się zawali.",
+          "more": "**Najprościej:** tablica, której rozmiar poznajesz dopiero w trakcie działania programu.\n\n**Zapis:** `int a[n];` gdzie `n` to zmienna (C99).\n\n**Gdzie leży:** na **stosie** (podręczna półka). Stąd zaleta i wada:\n- **+** wygoda (nie musisz z góry znać rozmiaru)\n- **−** ryzyko **przepełnienia stosu** dla dużych `n`, brak sprawdzania\n\nW C11 VLA są opcjonalne.\n\n**⚠️ Na egzaminie:** VLA żyją na stosie, rozmiar znany dopiero w runtime."
+        },
+        {
+          "term": "Padding / wyrównanie struktur",
+          "eli5": "Komputer lubi układać dane w równych rządkach. Czasem wstawia puste przerwy (padding) między polami struktury, żeby ładnie leżały. Dlatego struktura bywa większa niż suma jej części, i zależy od kolejności pól.",
+          "more": "**Najprościej:** komputer lubi układać dane w równych rządkach, więc czasem wstawia puste przerwy między polami.\n\n**Dlaczego:** procesor szybciej czyta pola leżące pod „ładnymi\" adresami (wyrównanie/alignment). Kompilator dokłada **padding** (luki), by tak było.\n\n**Skutek:** `sizeof(struct)` ≥ suma rozmiarów pól, i **zależy od kolejności pól**. Poukładanie pól od największych do najmniejszych zwykle zmniejsza padding.\n\n**⚠️ Na egzaminie:** rozmiar struktury zależy od wyrównania i kolejności pól — nie zawsze = suma `sizeof` pól."
+        },
+        {
+          "term": "qsort()",
+          "eli5": "To gotowa maszynka do sortowania, która ułoży cokolwiek jej dasz — musisz tylko dać jej instrukcję 'który z tych dwóch jest pierwszy?' (komparator).",
+          "more": "**Najprościej:** gotowa maszynka ze `stdlib`, która posortuje cokolwiek jej dasz.\n\n**Wywołanie:** `qsort(baza, liczba, rozmiar_elementu, komparator)`.\n\n**Sekret uniwersalności:** działa na `void*`, więc nie wie, co sortuje — dlatego **ty** dajesz jej **komparator**: funkcję zwracającą `<0`, `0`, `>0` (który element pierwszy).\n\n**Wydajność:** średnio `O(n log n)`.\n\n**⚠️ Na egzaminie:** qsort wymaga funkcji porównującej i **nie jest stabilne** wg standardu."
+        }
+      ]
+    },
+    {
+      "title": "5. Programowanie funkcyjne i obiektowe",
+      "items": [
+        {
+          "term": "Funkcja wyższego rzędu",
+          "eli5": "To funkcja, która przyjmuje inną funkcję jako prezent albo oddaje funkcję. Jak 'map' — dajesz jej czynność, a ona wykonuje ją na każdym elemencie listy.",
+          "more": "**Najprościej:** funkcja, która przyjmuje inną funkcję jako prezent albo oddaje funkcję.\n\n**Dwa przypadki (wystarczy jeden):**\n- przyjmuje funkcję jako argument (np. `map(f, lista)`)\n- zwraca funkcję jako wynik\n\n**Klasyczne przykłady:** `map` (zrób coś z każdym elementem), `filter` (zostaw pasujące), `reduce/fold` (zwiń do jednej wartości), kompozycja funkcji.\n\n**⚠️ Na egzaminie:** HOF operuje na funkcjach; `map` i `filter` to sztandarowe przykłady."
+        },
+        {
+          "term": "Typ algebraiczny (ADT)",
+          "eli5": "Suma to wybór: 'albo pies, albo kot' (jedno z dwóch). Iloczyn to zestaw: 'pies I kot naraz' (oba pola razem). Pattern matching to sprawdzanie, który to teraz jest przypadek.",
+          "more": "**Najprościej:** budujesz nowy typ z innych na dwa sposoby: „albo-albo\" oraz „i-i\".\n\n**1. Typ sumy (wariant/union) — „albo A, albo B\".**\nNp. `Maybe` (jest wartość ALBO jej brak), `Either` (wynik ALBO błąd). W danej chwili to **jeden** z wariantów.\n\n**2. Typ iloczynu (rekord/krotka) — „A i B naraz\".**\nNp. punkt = `(x, y)` — oba pola jednocześnie.\n\n**Pattern matching** rozróżnia, który wariant sumy właśnie mamy, i rozpakowuje pola.\n\n**⚠️ Na egzaminie:** suma = wybór jednego wariantu; iloczyn = kombinacja pól."
+        },
+        {
+          "term": "Funktor i monada",
+          "eli5": "Funktor to pudełko, w którym możesz coś zmienić, nie otwierając go (map). Monada to sposób ustawiania czynności w kolejce, jedna po drugiej, kiedy każda ma jakiś dodatkowy bagaż (np. może się nie udać).",
+          "more": "**Najprościej:** to „pudełka\", w których obliczasz, nie wyjmując zawartości na stół.\n\n**Funktor —** pudełko, które umie `map`: zmieniasz zawartość, **struktura pudełka zostaje**. Np. `map (+1) [1,2,3] = [2,3,4]` — lista dalej jest listą.\n\n**Monada —** funktor, który dodatkowo umie **ustawiać obliczenia w kolejkę** z jakimś bagażem/kontekstem:\n- `Maybe` — obliczenia, które mogą się nie udać\n- `IO` — obliczenia z efektem (wejście/wyjście)\n- `List` — obliczenia z wieloma wynikami\n\n**Po co monada:** porządkuje sekwencję kroków „jedno po drugim\", automatycznie przenosząc kontekst (np. jak coś zwróci `Nothing`, reszta się nie wykonuje).\n\n**⚠️ Na egzaminie:** funktor = `map` pod strukturą; monada = sekwencjonowanie obliczeń z kontekstem."
+        },
+        {
+          "term": "Polimorfizm (parametryczny / ad-hoc)",
+          "eli5": "Parametryczny to jedna funkcja działająca tak samo dla wszystkiego (policz długość dowolnej listy). Ad-hoc to ta sama nazwa, ale różne działanie dla różnych rzeczy (dodawanie liczb vs sklejanie napisów).",
+          "more": "**Najprościej:** „polimorfizm\" = jeden zapis działa dla wielu typów, ale na dwa różne sposoby.\n\n**1. Parametryczny (generyki) —** DOKŁADNIE ta sama funkcja dla wszystkich typów. Np. `length :: [a] -> Int` liczy długość dowolnej listy, nie zaglądając w elementy.\n\n**2. Ad-hoc (przeciążanie, klasy typów) —** ta sama nazwa, ale **różne implementacje** dla różnych typów. Np. `+` dla liczb dodaje, dla napisów skleja.\n\n**⚠️ Na egzaminie:** generyki = parametryczny; klasy typów / przeciążanie = ad-hoc."
+        },
+        {
+          "term": "Rekursja ogonowa",
+          "eli5": "To rekursja, gdzie wywołanie samej siebie jest ostatnią czynnością. Komputer może ją zamienić w zwykłą pętlę, więc nie zapycha pamięci — jak sztafeta, gdzie oddajesz pałeczkę i od razu schodzisz z bieżni.",
+          "more": "**Najprościej:** rekursja, w której wywołanie samej siebie jest **ostatnią** czynnością.\n\n**Dlaczego to ważne:** skoro po powrocie nie ma już nic do zrobienia, komputer nie musi pamiętać starej ramki — może ją **nadpisać**. Zamienia rekursję w zwykłą pętlę (**TCO** — optymalizacja wywołań ogonowych). Efekt: **stała pamięć stosu**.\n\n**Kontrast:** rekursja **nieogonowa** (np. drzewiasta jak Fibonacci — dwa wywołania) rośnie na stosie.\n\n**Sztafeta:** oddajesz pałeczkę i od razu schodzisz z bieżni — nie czekasz.\n\n**⚠️ Na egzaminie:** rekursja ogonowa może być zoptymalizowana (TCO) i nie zapycha stosu."
+        },
+        {
+          "term": "Leniwe obliczanie (lazy)",
+          "eli5": "To 'policzę to dopiero, jak naprawdę będzie potrzebne'. Dzięki temu możesz mieć nieskończoną listę — bierzesz z niej tylko tyle, ile chcesz w danej chwili.",
+          "more": "**Najprościej:** „policzę to dopiero, jak naprawdę będzie potrzebne\" — i zapamiętam wynik.\n\n**Nazwa techniczna:** call-by-need. Wartość liczona przy pierwszym użyciu, potem trzymana gotowa.\n\n**Co to daje:**\n- **nieskończone struktury** — możesz mieć „nieskończoną listę\", bo bierzesz z niej tylko tyle, ile chcesz\n- unikanie zbędnych obliczeń\n\n**Przeciwieństwo:** gorliwe (eager/strict) — liczy od razu. Lazy króluje w Haskellu.\n\n**⚠️ Na egzaminie:** lazy = obliczenie odroczone; pozwala na nieskończone listy/strumienie."
+        },
+        {
+          "term": "Cechy obiektowości (4 filary)",
+          "eli5": "Cztery zasady: abstrakcja (pokazuj tylko to, co ważne), hermetyzacja (schowaj bebechy za guziki), dziedziczenie (dziecko dostaje cechy rodzica), polimorfizm (jeden przycisk 'graj' działa różnie na różnych urządzeniach).",
+          "more": "**Najprościej:** cztery zasady, na których stoi programowanie obiektowe.\n\n**1. Abstrakcja —** pokazuj tylko to, co istotne; resztę pomiń.\n**2. Hermetyzacja (enkapsulacja) —** schowaj stan (bebechy) za interfejsem (guzikami).\n**3. Dziedziczenie —** dziecko przejmuje cechy rodzica; hierarchia i ponowne użycie.\n**4. Polimorfizm —** jeden interfejs, wiele implementacji (przycisk „graj\" działa różnie na różnych urządzeniach).\n\n**⚠️ Na egzaminie:** to klasyczna czwórka; hermetyzacja ≠ dziedziczenie."
+        }
+      ]
+    },
+    {
+      "title": "6. Podstawy baz danych",
+      "items": [
+        {
+          "term": "ACID (własności transakcji)",
+          "eli5": "Zasady bezpiecznych operacji w bazie: Atomowość (wszystko albo nic — jak przelew, który albo się cały uda, albo cały cofnie), Spójność (reguły zawsze zachowane), Izolacja (nie przeszkadzacie sobie), Trwałość (jak zapiszesz, to przetrwa nawet awarię prądu).",
+          "more": "**Najprościej:** cztery gwarancje bezpiecznej operacji w bazie — jak przelew, który albo cały przejdzie, albo cały się cofnie.\n\n**1. Atomicity (atomowość) —** wszystko albo nic. Jak coś padnie w połowie, cała transakcja jest cofana.\n**2. Consistency (spójność) —** baza przechodzi z jednego poprawnego stanu do drugiego (reguły zawsze zachowane).\n**3. Isolation (izolacja) —** równoległe transakcje nie zakłócają się wzajemnie.\n**4. Durability (trwałość) —** zatwierdzone zmiany przetrwają nawet awarię prądu (zapis na dysk).\n\n**⚠️ Na egzaminie:** izolacja dotyczy współbieżności, trwałość — awarii."
+        },
+        {
+          "term": "Model związków encji (ERD)",
+          "eli5": "To rysunek 'kto z czym się łączy' zanim zbudujesz bazę. Encje to rzeczy (Uczeń, Klasa), związki to połączenia (Uczeń chodzi do Klasy). Połączenie 'wielu do wielu' potrzebuje dodatkowej tabelki-pośrednika.",
+          "more": "**Najprościej:** rysunek „kto z czym się łączy\", robiony ZANIM zbudujesz bazę.\n\n**Trzy elementy:**\n- **encje** — rzeczy/obiekty (Uczeń, Klasa)\n- **atrybuty** — cechy encji (imię, wiek)\n- **związki** — relacje między encjami, z **licznością**: `1:1`, `1:N`, `M:N`\n\n**Ważny przypadek:** związek **`M:N`** (wielu do wielu) w modelu relacyjnym wymaga dodatkowej **tabeli łączącej**.\n\n**⚠️ Na egzaminie:** M:N → tabela pośrednicząca; ERD to model konceptualny, podstawa schematu."
+        },
+        {
+          "term": "Klucze (główny, obcy)",
+          "eli5": "Klucz główny to jak numer PESEL — jednoznacznie wskazuje jeden wiersz, nigdy pusty. Klucz obcy to wskaźnik 'ten wiersz należy do tamtego', który spina tabele ze sobą.",
+          "more": "**Najprościej:** różne rodzaje „identyfikatorów\" wiersza w tabeli.\n\n**1. Superklucz —** dowolny zbiór atrybutów jednoznacznie wskazujący krotkę (może mieć nadmiar).\n**2. Klucz kandydujący —** **minimalny** superklucz (bez zbędnych atrybutów).\n**3. Klucz główny (primary) —** wybrany kandydujący. **Unikalny i NOT NULL** (jak PESEL).\n**4. Klucz obcy (foreign) —** odwołanie do klucza w innej tabeli. Zapewnia **integralność referencyjną** (nie wskażesz nieistniejącego wiersza).\n\n**⚠️ Na egzaminie:** klucz główny ≠ NULL i unikalny; obcy spina tabele i pilnuje integralności."
+        },
+        {
+          "term": "Algebra relacji",
+          "eli5": "To podstawowe klocki, z których zbudowane jest SQL: selekcja (σ) wybiera WIERSZE spełniające warunek, projekcja (π) wybiera KOLUMNY, a join (⋈) skleja dwie tabele po pasujących danych.",
+          "more": "**Najprościej:** podstawowe klocki, z których zbudowany jest SQL.\n\n**Najważniejsze operacje:**\n- **selekcja `σ`** — wybiera **WIERSZE** spełniające warunek\n- **projekcja `π`** — wybiera **KOLUMNY**\n- **złączenie `⋈` (join)** — skleja relacje po warunku\n- **iloczyn kartezjański `×`** — każdy z każdym\n- suma `∪`, różnica `−`, przecięcie `∩`, przemianowanie `ρ`\n\n**Pamiętaj:** `σ` = wiersze (poziomo), `π` = kolumny (pionowo).\n\n**⚠️ Na egzaminie:** to teoretyczna podstawa SQL; join łączy relacje po warunku."
+        },
+        {
+          "term": "Normalizacja (postacie normalne)",
+          "eli5": "To sprzątanie bazy, żeby nie zapisywać tego samego wielokrotnie. Rozbijasz jedną wielką bałaganiarską tabelę na kilka porządnych (1NF, 2NF, 3NF), coraz bardziej ułożonych.",
+          "more": "**Najprościej:** sprzątanie bazy, żeby nie trzymać tej samej informacji w wielu miejscach (redundancja i anomalie).\n\n**Kolejne poziomy porządku:**\n1. **1NF —** wartości atomowe, brak grup powtarzalnych (jedna komórka = jedna wartość)\n2. **2NF —** 1NF + brak **zależności częściowej** od klucza (nieklucz zależy od CAŁEGO klucza)\n3. **3NF —** 2NF + brak **zależności przechodnich** (nieklucz nie zależy od innego niekluczu)\n4. **BCNF —** mocniejsza wersja 3NF\n\n**Cena:** mniej redundancji, ale więcej złączeń przy zapytaniach.\n\n**⚠️ Na egzaminie:** 2NF usuwa zależności częściowe, 3NF — przechodnie."
+        },
+        {
+          "term": "Widoki (views)",
+          "eli5": "To okno pokazujące tylko wybrany fragment danych — samo nie przechowuje danych, tylko pokazuje. Przydatne, gdy chcesz komuś dać podgląd, ale ukryć poufne kolumny.",
+          "more": "**Najprościej:** okno pokazujące wybrany fragment danych — samo danych **nie przechowuje**.\n\n**Czym jest:** wirtualna tabela zdefiniowana zapytaniem. Za każdym użyciem liczy się na bieżąco z tabel źródłowych.\n\n**Po co:**\n- **uproszczenie** skomplikowanych zapytań\n- **bezpieczeństwo** — pokaż tylko wybrane kolumny/wiersze, ukryj poufne\n- **niezależność logiczna**\n\n**Wyjątek:** widok **materializowany** faktycznie zapisuje wynik (zajmuje miejsce, trzeba odświeżać).\n\n**⚠️ Na egzaminie:** zwykły widok nie zajmuje miejsca na dane; materializowany — tak."
+        },
+        {
+          "term": "Indeksy",
+          "eli5": "To skorowidz na końcu książki. Dzięki niemu błyskawicznie znajdziesz stronę (szybki SELECT), ale za każdym dopisaniem czegoś do książki trzeba też zaktualizować skorowidz (wolniejsze zapisy).",
+          "more": "**Najprościej:** skorowidz na końcu książki — błyskawicznie znajdujesz stronę, ale trzeba go pielęgnować.\n\n**Jak działa:** dodatkowa struktura (najczęściej **B-drzewo**, czasem hasz) wskazująca, gdzie leżą wiersze.\n\n**Kompromis:**\n- **+** przyspiesza `SELECT` (wyszukiwanie)\n- **−** spowalnia `INSERT/UPDATE/DELETE` (każda zmiana musi zaktualizować indeks) i zajmuje miejsce\n\n**Typ ma znaczenie:** B-drzewo dobre dla **zakresów** (`>`, `<`, `BETWEEN`), hasz dla **równości** (`=`).\n\n**⚠️ Na egzaminie:** indeks przyspiesza odczyt, spowalnia zapisy."
+        }
+      ]
+    },
+    {
+      "title": "7. Technika cyfrowa",
+      "items": [
+        {
+          "term": "Bramki trójstanowe (stan Z)",
+          "eli5": "Zwykła bramka daje 0 albo 1. Trójstanowa ma trzecią opcję: Z, czyli 'odłączam się' — jak wyciągnięcie wtyczki. Dzięki temu wiele urządzeń może korzystać z jednego wspólnego kabla (magistrali) po kolei.",
+          "more": "**Najprościej:** zwykła bramka daje 0 albo 1. Trójstanowa ma trzecią opcję: „odłączam się\".\n\n**Trzeci stan — wysoka impedancja (Z):** wyjście jest jak **wyciągnięta wtyczka** — ani 0, ani 1, po prostu odcięte. Sterowane sygnałem **enable**.\n\n**Po co:** wiele urządzeń może dzielić jeden wspólny kabel — **magistralę**. W danej chwili tylko **jedno** wyjście jest aktywne, reszta w stanie Z.\n\n**⚠️ Na egzaminie:** stan Z = odcięcie od magistrali; klucz do współdzielenia szyny."
+        },
+        {
+          "term": "Tablice Karnaugha",
+          "eli5": "To rysunek-siatka, który pomaga uprościć skomplikowaną logikę. Zakreślasz sąsiednie jedynki w grupy (2, 4, 8...) — im większa grupa, tym prostszy wzór i mniej bramek.",
+          "more": "**Najprościej:** rysunek-siatka, który pomaga uprościć skomplikowaną logikę bez algebry.\n\n**Jak działa:**\n1. Wpisujesz wartości funkcji do siatki, gdzie **sąsiednie komórki różnią się jednym bitem** (kod Graya)\n2. **Zakreślasz grupy jedynek** — grupy muszą być potęgą 2 (`1, 2, 4, 8…`)\n3. Większa grupa = eliminuje więcej zmiennych = prostsze wyrażenie\n\n**Sztuczka:** grupy „owijają się\" na brzegach tablicy (lewy brzeg sąsiaduje z prawym).\n\n**⚠️ Na egzaminie:** grupy = potęgi 2 i owijają się; większa grupa = prostszy wynik."
+        },
+        {
+          "term": "Układy synchroniczne i asynchroniczne",
+          "eli5": "Synchroniczne robią wszystko na sygnał wspólnego zegara — jak taniec do rytmu, przewidywalny. Asynchroniczne reagują natychmiast, kiedy tylko coś się zmieni — szybciej, ale łatwo o bałagan.",
+          "more": "**Najprościej:** jedne robią wszystko na wspólny rytm, drugie reagują natychmiast.\n\n**Synchroniczne —** zmiany stanu taktowane wspólnym **zegarem**. Jak taniec do rytmu: przewidywalne, łatwiejsze w projektowaniu.\n\n**Asynchroniczne —** reagują od razu na zmianę wejść, **bez zegara**. Szybsze, ale podatne na **hazardy** (wyścigi sygnałów) i trudniejsze.\n\n**⚠️ Na egzaminie:** synchroniczny = wspólny zegar; asynchroniczny = brak zegara, ryzyko wyścigów."
+        },
+        {
+          "term": "Multiplekser / demultiplekser",
+          "eli5": "MUX to przełącznik kanałów w telewizorze — z wielu wejść wybiera jedno wyjście. DEMUX robi odwrotnie: jedno wejście kieruje do jednego z wielu wyjść. n przycisków wyboru obsłuży 2ⁿ kanałów.",
+          "more": "**Najprościej:** MUX to przełącznik kanałów, DEMUX robi odwrotnie.\n\n**MUX (multiplekser) —** z **wielu wejść** wybiera **jedno wyjście**, wg linii adresowych. `n` linii wyboru obsłuży **`2ⁿ`** wejść. To jak przełącznik kanałów TV — może zrealizować dowolną funkcję logiczną.\n\n**DEMUX (demultiplekser) —** jedno wejście kieruje na **jedno z wielu wyjść**.\n\n**⚠️ Na egzaminie:** `n` linii adresowych → `2ⁿ` wejść MUX."
+        },
+        {
+          "term": "Hazardy",
+          "eli5": "To krótkie 'zakłócenia', gdy sygnały docierają różnymi drogami w różnym czasie i przez chwilę wyjście miga, choć nie powinno — jak echo, które przez moment myli.",
+          "more": "**Najprościej:** krótkie, niechciane „mignięcia\" na wyjściu, bo sygnały docierają różnymi drogami w różnym czasie.\n\n**Skąd się biorą:** różne **opóźnienia propagacji** ścieżek — jeden sygnał przychodzi ciut później i przez moment wyjście jest błędne.\n\n**Rodzaje:**\n- **statyczny** — wyjście powinno być stałe, a pojawia się krótki impuls\n- **dynamiczny** — przy zmianie pojawiają się dodatkowe przełączenia\n\n**Leczenie:** dodatkowe (redundantne) składniki logiczne, synchronizacja zegarem.\n\n**⚠️ Na egzaminie:** hazard = skutek różnic opóźnień; groźny w układach asynchronicznych."
+        },
+        {
+          "term": "Rejestry",
+          "eli5": "To malutka pamięć na jedno słowo z bitów. Rejestr przesuwny przesuwa bity po kolei jak taśma — zamienia dane 'jeden po drugim' na 'wszystkie naraz' i odwrotnie.",
+          "more": "**Najprościej:** malutka pamięć na jedno „słowo\" bitów, zbudowana z przerzutników.\n\n**Rodzaje:**\n- **równoległy (parallel)** — wszystkie bity wchodzą/wychodzą naraz\n- **przesuwający (shift)** — bity wędrują po kolei, bit po bicie\n\n**Zastosowanie rejestru przesuwnego:** konwersja **szeregowo↔równolegle** (SIPO/PISO), a także mnożenie/dzielenie przez 2 (przesunięcie bitów).\n\n**⚠️ Na egzaminie:** rejestr przesuwny konwertuje szereg↔równolegle i przesuwa bity."
+        },
+        {
+          "term": "Liczniki",
+          "eli5": "To urządzenia, które liczą impulsy jak licznik kliknięć. Synchroniczne liczą wszystkie cyfry na raz (szybko), asynchroniczne przekazują sobie po kolei (wolniej, z opóźnieniem).",
+          "more": "**Najprościej:** układy, które liczą impulsy — jak licznik kliknięć.\n\n**Dwa rodzaje:**\n- **asynchroniczny (ripple)** — przerzutniki taktowane **kaskadowo** (jeden wyzwala następny). Wolniejszy, bo opóźnienie się **narasta**.\n- **synchroniczny** — wszystkie przerzutniki taktowane **wspólnym zegarem** naraz. Szybszy, bez narastającego opóźnienia.\n\nLiczą modulo N, w górę lub w dół.\n\n**⚠️ Na egzaminie:** licznik synchroniczny szybszy i bez narastającego opóźnienia."
+        },
+        {
+          "term": "Sumatory i półsumatory",
+          "eli5": "Półsumator dodaje 2 bity i daje wynik + przeniesienie. Pełny sumator dodaje 3 bity (bo przyjmuje przeniesienie z poprzedniej kolumny) — jak dodawanie w słupku z 'pożyczaniem'.",
+          "more": "**Najprościej:** układy dodające bity — jak dodawanie w słupku z przenoszeniem.\n\n**Półsumator (half adder) —** dodaje **2 bity**, daje sumę i przeniesienie (carry-out). **Nie ma** wejścia przeniesienia.\n\n**Sumator pełny (full adder) —** dodaje **3 bity** (dwa dane + carry-in z poprzedniej kolumny), daje sumę i carry-out.\n\n**Łączenie:** kaskada pełnych sumatorów = sumator równoległy (ripple carry) dla wielobitowych liczb.\n\n**⚠️ Na egzaminie:** half adder NIE ma wejścia carry, full adder MA."
+        },
+        {
+          "term": "Przerzutniki (flip-flopy)",
+          "eli5": "To najmniejsze pudełeczka pamiętające 1 bit (0 albo 1). D zapamiętuje to, co dostanie. T za każdym razem się przełącza. JK jest uniwersalny i nie ma 'zakazanego' stanu.",
+          "more": "**Najprościej:** najmniejsze pudełeczka pamiętające **1 bit** (0 albo 1).\n\n**Rodzaje:**\n- **SR (set/reset)** — ustaw/zeruj, ma **stan zabroniony** (S=R=1)\n- **D (data)** — zapamiętuje to, co dostanie na wejściu (zatrzask danych)\n- **JK** — uniwersalny, **brak stanu zabronionego**, dla J=K=1 się przełącza (toggle)\n- **T (toggle)** — przy każdym takcie zmienia stan (do liczników)\n\n**Wyzwalanie:** poziomem (latch) lub zboczem zegara (edge).\n\n**⚠️ Na egzaminie:** JK usuwa stan zabroniony SR; T służy do liczników."
+        },
+        {
+          "term": "Automaty (Moore / Mealy)",
+          "eli5": "To maszyny stanów. W Moore wyjście zależy tylko od tego, w jakim jesteś pokoju (stanie). W Mealy zależy od pokoju I od tego, którymi drzwiami wchodzisz (stan + wejście).",
+          "more": "**Najprościej:** maszyny stanów (FSM) — chodzą po „pokojach\" (stanach). Różnią się tym, od czego zależy wyjście.\n\n**Moore —** wyjście zależy **tylko od stanu** (od tego, w którym pokoju jesteś).\n\n**Mealy —** wyjście zależy **od stanu i od wejścia** (od pokoju ORAZ którymi drzwiami wchodzisz). Zwykle mniej stanów i szybsza reakcja.\n\nOpis: graf stanów, tablica przejść.\n\n**⚠️ Na egzaminie:** Moore = wyjście od stanu; Mealy = od stanu i wejścia."
+        },
+        {
+          "term": "Układy kombinacyjne i sekwencyjne",
+          "eli5": "Kombinacyjne nie mają pamięci — wynik zależy tylko od tego, co jest teraz na wejściu (jak kalkulator). Sekwencyjne pamiętają, co było wcześniej (jak licznik).",
+          "more": "**Najprościej:** jedne mają pamięć, drugie nie.\n\n**Kombinacyjne —** wyjście zależy **tylko od bieżących wejść**, brak pamięci. Jak kalkulator: te same wejścia → te same wyjścia. Przykłady: bramki, MUX, sumatory, dekodery.\n\n**Sekwencyjne —** wyjście zależy od wejść **i stanu** (mają pamięć tego, co było). Przykłady: przerzutniki, rejestry, liczniki, automaty.\n\n**⚠️ Na egzaminie:** kombinacyjny = bez pamięci; sekwencyjny = z pamięcią stanu."
+        }
+      ]
+    },
+    {
+      "title": "8. Technika mikroprocesorowa",
+      "items": [
+        {
+          "term": "DMA (bezpośredni dostęp do pamięci)",
+          "eli5": "To pomocnik, który przenosi dane między pamięcią a urządzeniem BEZ angażowania procesora. Procesor mówi 'przenieś to' i idzie robić inne rzeczy, a pomocnik daje znać, gdy skończy.",
+          "more": "**Najprościej:** pomocnik, który przenosi dane między pamięcią a urządzeniem I/O **bez angażowania procesora**.\n\n**Jak działa (krok po kroku):**\n1. CPU zleca kontrolerowi DMA transfer i wraca do swoich zadań\n2. DMA sam przenosi dane (dysk ↔ pamięć)\n3. Po zakończeniu DMA zgłasza **przerwanie**\n\n**Koszt:** DMA „podkrada\" cykle magistrali (**cycle stealing**), ale i tak mocno odciąża CPU przy dużych transferach.\n\n**⚠️ Na egzaminie:** DMA odciąża CPU; kradnie cykle magistrali."
+        },
+        {
+          "term": "SRAM vs DRAM",
+          "eli5": "SRAM jest szybka i droga, nie trzeba jej odświeżać (używana w cache). DRAM jest tania i pojemna, ale jak dziurawy kubeł — musi być ciągle dolewana (odświeżana), bo się rozładowuje. To pamięć główna.",
+          "more": "**Najprościej:** dwie pamięci — jedna szybka i droga, druga tania i „dziurawa\".\n\n**SRAM (statyczna) —** bit trzymany w **przerzutniku**. Szybka, droga, **nie wymaga odświeżania**. Używana w **cache**.\n\n**DRAM (dynamiczna) —** bit w **kondensatorze**, który się rozładowuje, więc trzeba go ciągle **odświeżać**. Tania, gęsta, wolniejsza. To **pamięć główna** (RAM).\n\n**⚠️ Na egzaminie:** DRAM wymaga odświeżania i jest wolniejsza; SRAM siedzi w cache."
+        },
+        {
+          "term": "Pamięć Flash",
+          "eli5": "To pamięć, która pamięta nawet po wyłączeniu prądu (jak pendrive czy SSD). Kasuje się ją całymi blokami i ma ograniczoną liczbę zapisów — w końcu się zużywa.",
+          "more": "**Najprościej:** pamięć, która pamięta nawet po odcięciu prądu (pendrive, SSD).\n\n**Cechy:**\n- **nieulotna** — trzyma dane bez zasilania\n- elektrycznie kasowalna (odmiana EEPROM), ale **kasowana blokami** (nie pojedynczy bajt)\n- **ograniczona liczba cykli** zapisu/kasowania — komórki się **zużywają**\n\n**Typy:** NOR (szybki odczyt losowy, do kodu) i NAND (gęsta, do danych, dyski SSD).\n\n**⚠️ Na egzaminie:** Flash nieulotna, kasowana blokowo, ograniczona żywotność komórek."
+        },
+        {
+          "term": "RISC vs CISC",
+          "eli5": "RISC to mało prostych rozkazów, każdy szybki i równej długości (jak proste klocki LEGO). CISC to dużo skomplikowanych rozkazów różnej długości (jak gotowe, złożone zabawki). RISC łatwiej ustawić w taśmę (potok).",
+          "more": "**Najprościej:** proste klocki LEGO kontra gotowe, złożone zabawki.\n\n**RISC —** mało **prostych** rozkazów **równej długości**, zwykle 1 cykl, dużo rejestrów, architektura **load/store** (pamięć tylko przez load/store). Łatwe **potokowanie**. Np. ARM, RISC-V.\n\n**CISC —** dużo **złożonych** rozkazów **zmiennej długości**, operacje pamięć-pamięć, mniej rejestrów. Np. x86.\n\n**⚠️ Na egzaminie:** RISC = proste, stałej długości, łatwy pipeline; CISC = złożone, zmiennej długości."
+        },
+        {
+          "term": "Pipelining (potokowe wykonanie)",
+          "eli5": "To taśma produkcyjna dla rozkazów — kiedy jeden jest myty, drugi jest już suszony, trzeci pakowany. Wszystko idzie równocześnie na różnych etapach, więc robi się więcej naraz. Ale skoki ('a jednak nie tędy!') psują taśmę.",
+          "more": "**Najprościej:** taśma produkcyjna dla rozkazów — gdy jeden jest myty, drugi już suszony.\n\n**Fazy rozkazu** (np. 5): pobranie → dekodowanie → wykonanie → dostęp do pamięci → zapis. W potoku **kilka rozkazów naraz**, każdy na innym etapie.\n\n**Zysk:** większa **przepustowość** (więcej rozkazów na sekundę). Ale **nie skraca** czasu pojedynczego rozkazu.\n\n**Zagrożenia (hazardy):** strukturalne (brak zasobu), danych (rozkaz czeka na wynik), sterowania (skoki psują taśmę).\n\n**⚠️ Na egzaminie:** potok zwiększa przepustowość; skoki powodują hazardy sterowania."
+        },
+        {
+          "term": "volatile w C/C++",
+          "eli5": "To karteczka na zmiennej: 'UWAGA, to może się zmienić samo z zewnątrz (sprzęt, przerwanie)'. Mówi kompilatorowi 'zawsze sprawdzaj na nowo, nie zgaduj wartości'. Nie robi jednak porządku między wątkami.",
+          "more": "**Najprościej:** karteczka na zmiennej: „UWAGA, mogę zmienić się sama z zewnątrz\".\n\n**Co robi:** mówi kompilatorowi **nie optymalizuj** dostępów — każdy odczyt naprawdę sięga do pamięci (nie używaj zapamiętanej wartości z rejestru).\n\n**Kiedy potrzebne:** rejestry sprzętowe, zmienne zmieniane przez **przerwanie (ISR)**, inny wątek czy sprzęt.\n\n**Czego NIE robi:** nie zapewnia **atomowości** ani synchronizacji między wątkami.\n\n**⚠️ Na egzaminie:** volatile wyłącza optymalizację odczytów/zapisów; to nie jest mechanizm synchronizacji."
+        }
+      ]
+    },
+    {
+      "title": "9. Architektura komputerów",
+      "items": [
+        {
+          "term": "Pamięć podręczna (cache)",
+          "eli5": "To mała, superszybka półka tuż przy procesorze na rzeczy, których używasz najczęściej — żebyś nie biegał za każdym razem do dużej, wolnej szafy (RAM). Działa, bo zwykle sięgamy po to, co niedawno albo blisko.",
+          "more": "**Najprościej:** mała, superszybka półka tuż przy procesorze na rzeczy używane najczęściej — żeby nie biegać do wielkiej, wolnej szafy (RAM).\n\n**Dlaczego działa (lokalność):**\n- **czasowa** — jak użyłeś czegoś, pewnie zaraz użyjesz znowu\n- **przestrzenna** — pewnie sięgniesz po dane obok\n\n**Poziomy:** L1 (najmniejszy, najszybszy) → L2 → L3.\n\n**Trafienie/chybienie:** **hit** = jest w cache (szybko), **miss** = trzeba sięgnąć do wolniejszej pamięci.\n\n**Wada:** koszt, złożoność (spójność cache w wieloprocesorach).\n\n**⚠️ Na egzaminie:** cache działa dzięki lokalności; miss = sięgnięcie do wolniejszej pamięci."
+        },
+        {
+          "term": "Prawo Amdahla i Gustafsona",
+          "eli5": "Amdahl: jeśli część zadania musi być robiona po kolei, to nawet 1000 pomocników nie przyspieszy jej w nieskończoność — ta 'po kolei' część was hamuje. Gustafson patrzy weselej: mając więcej pomocników, po prostu bierzemy większe zadanie.",
+          "more": "**Najprościej:** dwa spojrzenia na to, ile zyskasz, dokładając procesorów.\n\n**Amdahl (pesymistyczny) —** dla **stałego** problemu część **sekwencyjna** (`s`) hamuje. Maksymalne przyspieszenie = `1 / (s + (1−s)/p)`. Nawet 1000 procesorów nie przeskoczy tej sekwencyjnej części.\n\n**Gustafson (optymistyczny) —** dla **rosnącego** problemu przyspieszenie skaluje się liniowo — mając więcej procesorów, bierzesz po prostu **większe** zadanie.\n\n**⚠️ Na egzaminie:** Amdahl = stały rozmiar (pesymistyczny); Gustafson = skalowany rozmiar (optymistyczny)."
+        },
+        {
+          "term": "Benchmarki HPL i HPCG",
+          "eli5": "To testy prędkości superkomputerów. HPL (LINPACK) mierzy czystą moc liczenia — pokazuje najładniejsze wyniki (lista TOP500). HPCG bardziej przypomina prawdziwe programy i mocno obciąża pamięć, więc daje niższe, uczciwsze wyniki.",
+          "more": "**Najprościej:** dwa testy prędkości superkomputerów, które mierzą co innego.\n\n**HPL (LINPACK) —** rozwiązuje **gęsty** układ równań. Mierzy szczytową moc obliczeniową (**FLOPS**), jest podstawą listy **TOP500**. Faworyzuje surową moc (compute-bound) — pokazuje ładne, wysokie wyniki.\n\n**HPCG —** **rzadkie** macierze, wzorzec bliski realnym aplikacjom. Obciąża **pamięć i komunikację** (memory-bound). Daje niższe, „uczciwsze\" wyniki.\n\n**⚠️ Na egzaminie:** HPL = moc obliczeniowa; HPCG = przepustowość pamięci, realistyczniejszy."
+        },
+        {
+          "term": "Taksonomia Flynna",
+          "eli5": "To podział komputerów wg 'ile instrukcji i ile danych naraz'. SISD = jeden robotnik, jedno zadanie. SIMD = jedna komenda, wielu robotników robi to samo na różnych danych (GPU). MIMD = wielu robotników, każdy swoje (klaster).",
+          "more": "**Najprościej:** podział komputerów wg „ile strumieni instrukcji i ile strumieni danych naraz\".\n\n**Cztery klasy:**\n- **SISD —** jeden robotnik, jedno zadanie (klasyczny jednoprocesor)\n- **SIMD —** jedna instrukcja, wielu robotników na różnych danych (**GPU**, wektory)\n- **MISD —** rzadki, egzotyczny przypadek\n- **MIMD —** wielu robotników, każdy swoje (wieloprocesory, **klastry**)\n\n**⚠️ Na egzaminie:** GPU/wektory = SIMD; klaster wielordzeniowy = MIMD."
+        },
+        {
+          "term": "Wydajność komputera",
+          "eli5": "Szybkość komputera to nie tylko zegar (GHz). Liczy się też ile robi na cykl (IPC), ile ma rdzeni i jak szybka jest pamięć. Sam wysoki zegar nie wystarczy.",
+          "more": "**Najprościej:** szybkość to NIE tylko zegar (GHz).\n\n**Co się składa na wydajność:**\n- częstotliwość zegara\n- **IPC** — ile instrukcji na cykl\n- liczba rdzeni\n- hierarchia i **przepustowość pamięci** (cache, RAM), I/O\n\n**Miary:** FLOPS, IPS, czas wykonania. Uwaga na **ścianę pamięci** i granice skalowania (Amdahl).\n\n**⚠️ Na egzaminie:** sama częstotliwość nie decyduje — liczy się IPC, rdzenie, pamięć."
+        }
+      ]
+    },
+    {
+      "title": "10. Inżynieria oprogramowania",
+      "items": [
+        {
+          "term": "Model kaskadowy (waterfall)",
+          "eli5": "To budowanie krok po kroku jak schody: najpierw wszystkie plany, potem projekt, potem budowa, na końcu testy. Prosty, ale sztywny — jak klient zmieni zdanie na końcu, to katastrofa i drogie poprawki.",
+          "more": "**Najprościej:** budowa krok po kroku jak schody — każda faza kończy się, zanim zacznie się następna.\n\n**Kolejność faz:** wymagania → projekt → implementacja → testy → wdrożenie → utrzymanie.\n\n**Zalety:** prostota, dobra dokumentacja, jasne kamienie milowe.\n**Wady:** sztywność, **późne wykrycie błędów**, kosztowne zmiany, klient widzi efekt dopiero na końcu.\n\n**⚠️ Na egzaminie:** waterfall = sekwencyjny, słaby przy zmiennych wymaganiach."
+        },
+        {
+          "term": "Zwinne vs klasyczne",
+          "eli5": "Klasyczne = zaplanuj wszystko z góry i trzymaj się planu. Zwinne (agile) = rób małymi kroczkami, często pokazuj klientowi, i łatwo zmieniaj kierunek, gdy trzeba.",
+          "more": "**Najprościej:** „zaplanuj wszystko z góry\" kontra „rób małymi kroczkami i dostosowuj się\".\n\n**Klasyczne (waterfall, V-model) —** planowanie z góry, sztywne, dużo dokumentacji, **predykcyjne**.\n\n**Zwinne (agile) —** iteracyjno-przyrostowe, **adaptacja do zmian**, częste dostarczanie, ścisła współpraca z klientem, mniej dokumentacji.\n\n**⚠️ Na egzaminie:** agile = iteracyjne i elastyczne; klasyczne = predykcyjne i sekwencyjne."
+        },
+        {
+          "term": "Agile Manifesto",
+          "eli5": "Cztery wartości: ludzie ważniejsi niż narzędzia, działający program ważniejszy niż gruba dokumentacja, rozmowa z klientem ważniejsza niż umowa, reagowanie na zmiany ważniejsze niż trzymanie się planu. 'Ważniejszy' nie znaczy, że to drugie jest bezwartościowe.",
+          "more": "**Najprościej:** cztery wartości mówiące, co jest ważniejsze przy wytwarzaniu oprogramowania.\n\n**Cztery wartości (lewe ważniejsze):**\n1. **Ludzie i interakcje** ponad procesy i narzędzia\n2. **Działające oprogramowanie** ponad obszerną dokumentację\n3. **Współpraca z klientem** ponad negocjacje umów\n4. **Reagowanie na zmiany** ponad realizację planu\n\nDo tego 12 zasad.\n\n**⚠️ Na egzaminie:** „ponad\" ≠ „zamiast\" — prawa strona też ma wartość, lewa większą."
+        },
+        {
+          "term": "Poziomy testów",
+          "eli5": "Testujemy na piętrach: jednostkowe (jeden klocek osobno), integracyjne (czy klocki pasują do siebie), systemowe (cała budowla), akceptacyjne (czy klient jest zadowolony).",
+          "more": "**Najprościej:** testujemy na piętrach — od jednego klocka po całą budowlę.\n\n**Poziomy (od dołu):**\n1. **jednostkowe** — pojedynczy moduł/funkcja osobno\n2. **integracyjne** — czy moduły współpracują\n3. **systemowe** — cały system jako całość\n4. **akceptacyjne** — czy spełnia wymagania **klienta** (klient zatwierdza)\n\n**Rodzaje:** czarnoskrzynkowe/białoskrzynkowe, regresji, wydajnościowe.\n\n**⚠️ Na egzaminie:** jednostkowe = najniższy poziom; akceptacyjne robi/zatwierdza klient."
+        },
+        {
+          "term": "Weryfikacja i walidacja",
+          "eli5": "Weryfikacja pyta: 'czy budujemy produkt DOBRZE?' (zgodnie ze specyfikacją). Walidacja pyta: 'czy budujemy WŁAŚCIWY produkt?' (czy to naprawdę to, czego użytkownik chciał).",
+          "more": "**Najprościej:** dwa różne pytania kontrolne o produkt.\n\n**Weryfikacja — „czy budujemy produkt POPRAWNIE?\"**\nZgodność ze **specyfikacją**. Czy zrobiliśmy dokładnie to, co zapisano.\n\n**Walidacja — „czy budujemy WŁAŚCIWY produkt?\"**\nZgodność z **potrzebami** użytkownika. Czy to w ogóle jest to, czego on chciał.\n\n**⚠️ Na egzaminie:** weryfikacja = wobec specyfikacji; walidacja = wobec potrzeb."
+        },
+        {
+          "term": "Wymagania funkcjonalne i niefunkcjonalne",
+          "eli5": "Funkcjonalne = CO ma robić ('ma logować użytkownika'). Niefunkcjonalne = JAK dobrze ('ma odpowiadać w mniej niż 1 sekundę', ma być bezpieczne).",
+          "more": "**Najprościej:** CO system ma robić kontra JAK dobrze ma to robić.\n\n**Funkcjonalne —** konkretne funkcje i zachowania. Np. „system ma logować użytkownika\".\n\n**Niefunkcjonalne (jakościowe) —** wydajność, bezpieczeństwo, niezawodność, użyteczność, skalowalność. Np. „odpowiedź w mniej niż 1 sekundę\".\n\n**⚠️ Na egzaminie:** „loguje użytkownika\" = funkcjonalne; „odpowiedź < 1 s\" = niefunkcjonalne."
+        },
+        {
+          "term": "Kanban i Scrum",
+          "eli5": "Scrum pracuje w równych odcinkach czasu (sprintach) z ustalonymi rolami i spotkaniami. Kanban to tablica z karteczkami płynącymi ciągle, z limitem 'ile rzeczy naraz w robocie' — bez sprintów.",
+          "more": "**Najprościej:** dwie zwinne metody — jedna w równych odcinkach czasu, druga ciągłym strumieniem.\n\n**Scrum —**\n- **role:** Product Owner, Scrum Master, Zespół\n- **sprinty** o stałej długości\n- **artefakty:** backlog produktu/sprintu, inkrement\n- **zdarzenia:** planning, daily, review, retrospektywa\n\n**Kanban —** tablica z wizualizacją przepływu, **limity WIP** (ile zadań naraz), **ciągły przepływ** bez sprintów i wyznaczonych ról.\n\n**⚠️ Na egzaminie:** Scrum = iteracje/role; Kanban = ciągły przepływ i limity WIP."
+        },
+        {
+          "term": "Studium wykonalności",
+          "eli5": "To sprawdzenie ZANIM zaczniesz: czy w ogóle się da i czy warto? Pod względem technicznym, kosztów, prawa i czasu. Na końcu decyzja: robimy albo nie robimy.",
+          "more": "**Najprościej:** sprawdzenie ZANIM zaczniesz — czy da się i czy warto?\n\n**Aspekty, które badasz:**\n- **techniczna** — czy technologia to udźwignie\n- **ekonomiczna** — koszt vs korzyść\n- **organizacyjna** — czy zespół/firma to ogarnie\n- **prawna** i **harmonogramowa** — czy zdążymy\n\n**Efekt:** decyzja **go / no-go**.\n\n**⚠️ Na egzaminie:** to analiza opłacalności i realności przed startem projektu."
+        },
+        {
+          "term": "Diagramy UML",
+          "eli5": "To standardowe rysunki do opisu programu. Strukturalne (np. klas) pokazują z czego zbudowany jest system. Behawioralne (np. sekwencji) pokazują jak on działa krok po kroku.",
+          "more": "**Najprościej:** standardowy zestaw rysunków do opisu systemu — jedne pokazują z czego jest zbudowany, inne jak działa.\n\n**Strukturalne (statyka — „z czego\"):** klas, obiektów, komponentów, wdrożenia, pakietów.\n\n**Behawioralne (dynamika — „jak działa\"):** przypadków użycia, sekwencji, aktywności, stanów, komunikacji.\n\n**⚠️ Na egzaminie:** diagram klas = struktura statyczna; sekwencji/aktywności = zachowanie/dynamika."
+        }
+      ]
+    },
+    {
+      "title": "11. Metody obliczeniowe",
+      "items": [
+        {
+          "term": "Numeryczna reprezentacja liczb",
+          "eli5": "Komputer ma tylko ograniczoną liczbę szufladek na liczby, więc nie zmieści wszystkich. Liczby leżą gęściej blisko zera, a rzadziej dalej. Dlatego wiele ułamków nie da się zapisać idealnie.",
+          "more": "**Najprościej:** komputer ma tylko ograniczoną liczbę szufladek na liczby, więc nie zmieści wszystkich.\n\n**Konsekwencje:**\n- zbiór liczb jest **skończony i nierównomierny** — gęściej blisko zera, rzadziej daleko\n- pojawiają się **błędy zaokrągleń** i **epsilon maszynowy** (najmniejsza rozróżnialna różnica)\n- wiele zwykłych ułamków dziesiętnych **nie ma** dokładnej reprezentacji\n\n**⚠️ Na egzaminie:** liczby zmiennoprzecinkowe są dyskretne i nierównomierne; nie każda liczba dziesiętna jest reprezentowalna."
+        },
+        {
+          "term": "IEEE 754 (arytmetyka float)",
+          "eli5": "To sposób zapisu liczb 'z przecinkiem' w komputerze. Ma ograniczoną dokładność, więc pojawiają się błędy zaokrągleń: dodawanie może dawać różne wyniki zależnie od kolejności, a odejmowanie bardzo bliskich liczb gubi cyfry.",
+          "more": "**Najprościej:** standard zapisu liczb „z przecinkiem\": `znak × mantysa × 2^wykładnik`.\n\n**Skutki skończonej precyzji:**\n- **błędy zaokrągleń** przy prawie każdej operacji\n- **brak łączności** dodawania — `(a+b)+c` ≠ `a+(b+c)` co do bitu\n- **utrata cyfr znaczących (cancellation)** przy odejmowaniu bliskich liczb\n- wartości specjalne: `±∞`, `NaN`, zero ze znakiem\n\n**⚠️ Na egzaminie:** dodawanie float nie jest łączne; odejmowanie bliskich liczb traci precyzję."
+        },
+        {
+          "term": "Divide and conquer w numeryce",
+          "eli5": "Podziel duży rachunek na mniejsze, policz je i sklej wyniki. Sztandarowy przykład to FFT, który liczy transformatę o wiele szybciej (n log n zamiast n²).",
+          "more": "**Najprościej:** podziel wielki rachunek na mniejsze, policz je i sklej wyniki.\n\n**Schemat:** `PODZIEL → ROZWIĄŻ mniejsze → POŁĄCZ`.\n\n**Sztandarowy przykład — FFT** (szybka transformata Fouriera): liczy w `O(n log n)` zamiast `O(n²)`.\n\n**Inne:** szybkie mnożenie macierzy, rekurencyjne całkowanie adaptacyjne.\n\n**⚠️ Na egzaminie:** FFT to klasyczny przykład dziel-i-zwyciężaj w numeryce."
+        },
+        {
+          "term": "Wielomiany ortogonalne",
+          "eli5": "To specjalne rodziny wielomianów (Czebyszewa, Legendre'a), które są 'ustawione prostopadle' i świetnie nadają się do przybliżania funkcji. Czebyszew pomaga uniknąć brzydkich falowań na brzegach (efekt Rungego).",
+          "more": "**Najprościej:** specjalne rodziny wielomianów „ustawionych prostopadle\", które świetnie przybliżają funkcje.\n\n**Rodziny:** Legendre'a, **Czebyszewa**, Hermite'a, Laguerre'a — ortogonalne względem iloczynu skalarnego z wagą.\n\n**Zastosowania:**\n- **aproksymacja** (minimalizacja błędu)\n- **kwadratury Gaussa** — węzły całkowania = **pierwiastki** wielomianu ortogonalnego\n- stabilne obliczenia\n\n**Czebyszew** minimalizuje błąd maksymalny → ogranicza brzydkie falowania na brzegach (**efekt Rungego**).\n\n**⚠️ Na egzaminie:** węzły Gaussa = pierwiastki wielomianów ortogonalnych; Czebyszew tłumi Rungego."
+        },
+        {
+          "term": "Kwadratury (Newton-Cotes, Gauss)",
+          "eli5": "To liczenie pola pod krzywą przez sumowanie pasków. Newton-Cotes bierze punkty równo rozstawione (trapezy, Simpson). Gauss mądrze wybiera punkty i wagi, więc jest dokładniejszy przy tej samej liczbie punktów.",
+          "more": "**Najprościej:** liczenie pola pod krzywą przez sumowanie pasków — dwa podejścia do wyboru punktów.\n\n**Newton-Cotes —** węzły **równoodległe**. Proste (trapezów, Simpsona), ale przy wysokim stopniu **niestabilne**.\n\n**Gauss —** węzły i wagi dobrane **optymalnie**. Kwadratura `n`-węzłowa jest dokładna dla wielomianów stopnia **≤ 2n−1** — czyli dużo dokładniejsza przy tej samej liczbie punktów.\n\n**⚠️ Na egzaminie:** Gauss dokładniejszy przy tej samej liczbie węzłów; Simpson należy do Newton-Cotes."
+        },
+        {
+          "term": "Układy równań liniowych (numerycznie)",
+          "eli5": "Metody bezpośrednie (eliminacja Gaussa, LU) dają wynik w skończonej liczbie kroków. Iteracyjne (Jacobi, Gauss-Seidel) krążą coraz bliżej odpowiedzi — dobre dla wielkich, rzadkich układów. Uwaga na 'źle uwarunkowane' macierze — dają duże błędy.",
+          "more": "**Najprościej:** dwa sposoby rozwiązywania `Ax = b` — „za skończoną liczbę kroków\" albo „krążąc coraz bliżej\".\n\n**Metody bezpośrednie —** eliminacja Gaussa, rozkład **LU**, Cholesky (dla macierzy symetrycznych dodatnio określonych). Dają wynik w **skończonej** liczbie kroków.\n\n**Metody iteracyjne —** Jacobi, Gauss-Seidel, gradienty sprzężone. Zbliżają się do rozwiązania — dobre dla **dużych rzadkich** układów.\n\n**Uwaga:** źle **uwarunkowana** macierz → małe błędy wejścia dają duże błędy wyniku.\n\n**⚠️ Na egzaminie:** bezpośrednie = skończona liczba kroków; iteracyjne dla dużych rzadkich; złe uwarunkowanie = duże błędy."
+        },
+        {
+          "term": "Równania nieliniowe (bisekcja, Newton)",
+          "eli5": "Szukanie miejsca, gdzie funkcja = 0. Bisekcja to gra 'ciepło-zimno' — pewna, ale wolna. Newton-Raphson jest szybki (skacze wzdłuż stycznej), ale wymaga pochodnej i dobrego startu, bo czasem ucieka w bok.",
+          "more": "**Najprościej:** szukanie miejsca, gdzie funkcja przecina zero.\n\n**Bisekcja —** gra „ciepło-zimno\" na przedziale ze zmianą znaku. **Zawsze zbiega**, ale **wolno** (liniowo).\n\n**Newton-Raphson —** skacze wzdłuż stycznej. **Szybki (kwadratowo)**, ale wymaga **pochodnej** i dobrego punktu startowego — czasem **rozbiega**.\n\n**Sieczne —** jak Newton, ale bez pochodnej (przybliża ją); zbieżność nadliniowa.\n\n**⚠️ Na egzaminie:** Newton kwadratowo zbieżny ale nie zawsze; bisekcja zawsze zbieżna w przedziale ze zmianą znaku."
+        },
+        {
+          "term": "Generatory liczb losowych (PRNG)",
+          "eli5": "To maszynki udające losowość. Są przewidywalne: to samo ziarno startowe daje dokładnie tę samą sekwencję 'losowych' liczb. Prawdziwie losowe biorą się dopiero ze zjawisk fizycznych.",
+          "more": "**Najprościej:** maszynki udające losowość — tak naprawdę w pełni przewidywalne.\n\n**PRNG (pseudolosowe) —** deterministyczne. **To samo ziarno (seed) → dokładnie ta sama sekwencja.** Mają skończony **okres**. Przykłady: LCG (liniowy kongruencyjny), Mersenne Twister.\n\n**Prawdziwie losowe —** ze źródeł fizycznych (szum, rozpad).\n\n**Transformacje rozkładów:** metoda odwrotnej dystrybuanty, Boxa-Mullera (rozkład normalny).\n\n**⚠️ Na egzaminie:** PRNG jest deterministyczny i okresowy; to samo ziarno = ta sama sekwencja."
+        }
+      ]
+    },
+    {
+      "title": "12. Podstawy sztucznej inteligencji",
+      "items": [
+        {
+          "term": "Uczenie nadzorowane",
+          "eli5": "Uczysz model na przykładach z podpisami: pokazujesz zdjęcia z etykietą 'pies'/'kot', a on uczy się rozpoznawać. Klasyfikacja = wybór kategorii, regresja = przewidywanie liczby.",
+          "more": "**Najprościej:** uczysz model na przykładach z podpisami (etykietami).\n\n**Jak działa:** pokazujesz pary `wejście → oczekiwane wyjście` (np. zdjęcie → „pies\"). Model uczy się mapowania.\n\n**Dwa zadania:**\n- **klasyfikacja** — etykiety **dyskretne** (pies/kot/ptak)\n- **regresja** — wartości **ciągłe** (cena, temperatura)\n\n**Przykłady:** drzewa decyzyjne, SVM, sieci neuronowe, regresja liniowa/logistyczna.\n\n**Ryzyko:** **przeuczenie (overfitting)** — model wkuwa dane treningowe zamiast uogólniać.\n\n**⚠️ Na egzaminie:** nadzorowane = etykiety; klasyfikacja (dyskretne) vs regresja (ciągłe)."
+        },
+        {
+          "term": "Uczenie nienadzorowane",
+          "eli5": "Dajesz kupę danych bez podpisów i mówisz 'poukładaj to sam'. Model sam znajduje grupy podobnych rzeczy (klasteryzacja, np. k-średnich) albo upraszcza dane (PCA).",
+          "more": "**Najprościej:** dajesz kupę danych **bez podpisów** i mówisz „poukładaj to sam\".\n\n**Główne zadania:**\n- **klasteryzacja** — grupowanie podobnych (k-średnich, hierarchiczna)\n- **redukcja wymiarowości** — upraszczanie danych (**PCA**)\n- **reguły asocjacyjne** — „kto kupił X, kupił też Y\"\n\n**Uwaga:** grupowanie (klasteryzacja) **≠** klasyfikacja — tu nie ma z góry danych kategorii.\n\n**⚠️ Na egzaminie:** brak etykiet; k-means i PCA to klasyka."
+        },
+        {
+          "term": "Budowa sieci neuronowej",
+          "eli5": "To warstwy 'neuronów'. Każdy neuron sumuje ważone wejścia i przepuszcza przez funkcję aktywacji, która dodaje 'zakrzywienie' (nieliniowość). Bez tego zakrzywienia cała sieć byłaby tylko zwykłą linią. Uczenie = dostrajanie wag.",
+          "more": "**Najprościej:** warstwy „neuronów\", które przepuszczają i przetwarzają sygnał.\n\n**Warstwy:** wejściowa → ukryte → wyjściowa.\n\n**Pojedynczy neuron:**\n1. liczy **sumę ważoną** wejść + `bias`\n2. przepuszcza przez **funkcję aktywacji** (sigmoid, tanh, **ReLU**), która dodaje **nieliniowość**\n\n**Kluczowa myśl:** bez nieliniowej aktywacji cała wielowarstwowa sieć = zwykły model **liniowy**. Uczenie = dostrajanie **wag**.\n\n**⚠️ Na egzaminie:** bez nieliniowej aktywacji sieć = model liniowy; ReLU popularna w głębokich sieciach."
+        },
+        {
+          "term": "Wsteczna propagacja (backpropagation)",
+          "eli5": "To sposób uczenia sieci na błędach. Najpierw sieć zgaduje, potem porównuje z prawdą i błąd 'cofa się' przez warstwy, poprawiając wagi tam, gdzie najbardziej zawiniły (regułą łańcuchową).",
+          "more": "**Najprościej:** uczenie sieci na własnych błędach, poprawiając wagi tam, gdzie najbardziej zawiniły.\n\n**Krok po kroku:**\n1. **Propagacja w przód** — policz wyjście i **błąd** (funkcję straty)\n2. **Propagacja wstecz** — policz **gradient** straty względem wag **regułą łańcuchową** (od końca do początku)\n3. **Aktualizacja wag** — spadek gradientu (przesuń wagi w stronę mniejszego błędu)\n\n**Warunek:** funkcje aktywacji muszą być **różniczkowalne**.\n\n**⚠️ Na egzaminie:** backprop liczy gradienty regułą łańcuchową; wymaga różniczkowalnych aktywacji."
+        },
+        {
+          "term": "Sieci rekurencyjne (RNN, LSTM)",
+          "eli5": "To sieci z pamięcią — przetwarzają rzeczy po kolei (tekst, mowa), pamiętając, co było wcześniej. Zwykłe RNN zapominają za szybko, więc wymyślono LSTM/GRU z 'bramkami' pamięci.",
+          "more": "**Najprościej:** sieci z **pamięcią** — przetwarzają rzeczy po kolei, pamiętając, co było wcześniej.\n\n**RNN —** mają sprzężenie zwrotne (**stan**), więc nadają się do **sekwencji**: tekst, mowa, szeregi czasowe.\n\n**Problem:** przy długich sekwencjach gradient **zanika** lub **eksploduje** — sieć zapomina albo się rozjeżdża.\n\n**Rozwiązanie — LSTM / GRU:** warianty z **bramkami**, które decydują, co pamiętać, a co zapomnieć.\n\n**⚠️ Na egzaminie:** RNN dla danych sekwencyjnych; LSTM/GRU rozwiązują problem zanikającego gradientu."
+        },
+        {
+          "term": "Algorytm A*",
+          "eli5": "To sprytne szukanie drogi = Dijkstra + intuicja. Liczy: ile już przeszedłeś (g) plus zgadywany dystans do celu (h). Jeśli zgadywanie nigdy nie przesadza (jest dopuszczalne), A* zawsze znajdzie najkrótszą trasę.",
+          "more": "**Najprościej:** sprytne szukanie drogi = Dijkstra + intuicja (heurystyka), która podpowiada, gdzie jest cel.\n\n**Wzór oceny węzła:** `f(n) = g(n) + h(n)`, gdzie:\n- `g(n)` — koszt **dotychczasowy** (ile już przeszedłeś)\n- `h(n)` — **szacowany** koszt do celu (heurystyka)\n\n**Gwarancja optymalności:** gdy heurystyka jest **dopuszczalna** (nigdy nie **przeszacowuje**) i spójna.\n\n**Skrajne przypadki:** `h = 0` → A* staje się zwykłym Dijkstrą.\n\n**⚠️ Na egzaminie:** A* = Dijkstra + heurystyka; dopuszczalna heurystyka gwarantuje optymalność."
+        }
+      ]
+    },
+    {
+      "title": "13. Systemy operacyjne",
+      "items": [
+        {
+          "term": "Algorytmy szeregowania",
+          "eli5": "To zasady, kto dostaje procesor. FCFS = kto pierwszy, ten pierwszy (ale wielka ciężarówka blokuje kolejkę). SJF = najkrótsze zadanie pierwsze (szybko, ale długie mogą głodować). Round Robin = każdy dostaje kawałek czasu po kolei (sprawiedliwie).",
+          "more": "**Najprościej:** zasady, który proces dostaje procesor i na jak długo.\n\n**Główne algorytmy:**\n- **FCFS** — kto pierwszy, ten pierwszy (ryzyko **efektu konwoju** — wielkie zadanie blokuje kolejkę)\n- **SJF** — najkrótsze zadanie pierwsze; **minimalny średni czas oczekiwania**, ale **głodzi** długie\n- **Round Robin** — każdy dostaje **kwant** czasu po kolei; sprawiedliwy, interaktywny\n- **priorytetowy** i **wielopoziomowe kolejki**\n\n**Podział:** wywłaszczające (można przerwać) vs niewywłaszczające.\n\n**⚠️ Na egzaminie:** RR z małym kwantem = dużo przełączeń; SJF minimalizuje śr. czas oczekiwania, ale głodzi długie."
+        },
+        {
+          "term": "Mechanizmy synchronizacji",
+          "eli5": "To narzędzia, żeby procesy sobie nie przeszkadzały przy wspólnej rzeczy: semafor (licznik wolnych miejsc), mutex (jeden klucz do łazienki), monitor. W systemach rozproszonych robi się to przez wysyłanie wiadomości.",
+          "more": "**Najprościej:** narzędzia, żeby procesy/wątki nie wchodziły sobie w drogę przy wspólnym zasobie.\n\n**Scentralizowane (wspólna pamięć):**\n- **semafor** — licznik wolnych miejsc/pozwoleń\n- **mutex** — jeden klucz do sekcji krytycznej (łazienki)\n- **monitor** + zmienne warunkowe\n\n**Rozproszone (brak wspólnej pamięci):** wzajemne wykluczanie przez **wiadomości** i znaczniki czasu — token ring, Ricart-Agrawala, Lamport.\n\n**⚠️ Na egzaminie:** semafor/mutex/monitor to prymitywy; w rozproszeniu synchronizacja przez komunikaty."
+        },
+        {
+          "term": "Problemy synchronizacyjne",
+          "eli5": "Klasyczne zagadki: producent-konsument (jeden wkłada, drugi wyjmuje z półki), czytelnicy-pisarze, i ucztujący filozofowie (każdy chce dwóch widelców naraz — grozi zakleszczeniem, gdy wszyscy chwycą po jednym).",
+          "more": "**Najprościej:** klasyczne zagadki, które ilustrują pułapki współbieżności.\n\n**Cztery klasyki:**\n1. **Producent-konsument** — jeden wkłada, drugi wyjmuje z **bufora ograniczonego** (rozwiązanie: semafory)\n2. **Czytelnicy-pisarze** — wielu czyta, ale pisarz musi mieć zasób na wyłączność\n3. **Ucztujący filozofowie** — każdy chce dwóch widelców naraz → grozi **zakleszczeniem** i głodzeniem\n4. **Śpiący fryzjer** — synchronizacja klient–usługodawca\n\n**⚠️ Na egzaminie:** filozofowie = klasyczny przykład zakleszczenia; producent-konsument rozwiązywany semaforami."
+        },
+        {
+          "term": "Proces a wątek",
+          "eli5": "Proces to osobny dom z własnymi rzeczami — bezpieczny, ale kosztowny w budowie. Wątek to domownik w tym samym domu — dzieli pokoje (pamięć) z innymi, jest lekki i szybki, ale muszą się dogadywać, żeby nie wpaść na siebie.",
+          "more": "**Najprościej:** proces to osobny dom, wątek to domownik w tym samym domu.\n\n**Proces —** własna **przestrzeń adresowa**, izolowany. Bezpieczny, ale **kosztowny** w tworzeniu i przełączaniu.\n\n**Wątek —** jednostka wykonania **wewnątrz** procesu. **Współdzieli pamięć** i zasoby procesu. Lekki, szybkie przełączanie — ale wymaga **synchronizacji** (bo wątki wchodzą na wspólną pamięć).\n\n**⚠️ Na egzaminie:** wątki jednego procesu dzielą pamięć; procesy są izolowane."
+        },
+        {
+          "term": "Pamięć wirtualna (stronicowanie/segmentacja)",
+          "eli5": "Stronicowanie tnie pamięć na jednakowe kartki (strony/ramki) — zero marnowania na zewnątrz, trochę na końcu kartki. Segmentacja tnie logicznie na kawałki różnej długości (kod, dane, stos). Gdy brakuje strony, ładuje się ją z dysku (page fault).",
+          "more": "**Najprościej:** dwa sposoby cięcia pamięci — na równe kartki albo na logiczne kawałki.\n\n**Stronicowanie —** dzieli pamięć na **strony/ramki stałej wielkości**, mapowane **tablicą stron**. Brak fragmentacji **zewnętrznej**, jest **wewnętrzna** (marnowanie na końcu strony).\n\n**Segmentacja —** dzieli logicznie na **segmenty zmiennej długości** (kod, dane, stos). Jest fragmentacja **zewnętrzna**.\n\n**Page fault —** gdy potrzebnej strony nie ma w pamięci, ładuje się ją z dysku.\n\n**⚠️ Na egzaminie:** stronicowanie = stały rozmiar + fragmentacja wewnętrzna; segmentacja = zmienny + zewnętrzna."
+        },
+        {
+          "term": "Systemy czasu rzeczywistego",
+          "eli5": "Tu najważniejsze jest zdążyć na czas, a nie być najszybszym. Twardy RT: spóźnienie = katastrofa (poduszka powietrzna). Miękki RT: spóźnienie tylko psuje jakość (zacinający się film).",
+          "more": "**Najprościej:** liczy się **zdążyć na czas** (deadline), a nie być najszybszym.\n\n**Dwa rodzaje:**\n- **twardy (hard RT)** — przekroczenie terminu = **katastrofa** (poduszka powietrzna, sterownik hamulców)\n- **miękki (soft RT)** — spóźnienie tylko **pogarsza jakość** (zacinający się film)\n\n**Wymagają:** determinizmu i przewidywalnego szeregowania.\n\n**⚠️ Na egzaminie:** RT = przewidywalność i terminy, niekoniecznie „najszybszy\"."
+        },
+        {
+          "term": "Tworzenie procesów (fork/exec)",
+          "eli5": "fork() robi kopię procesu jak bliźniaka (dziecko). exec() zamienia program dziecka na zupełnie nowy. wait() to rodzic czekający, aż dziecko skończy.",
+          "more": "**Najprościej:** trzy uniksowe czasowniki: skopiuj się, zamień program, poczekaj.\n\n**Trzy wywołania:**\n- **fork()** — tworzy **kopię** procesu (dziecko). Dziedziczy przestrzeń (**copy-on-write**). Zwraca `0` dziecku, `PID` rodzicowi\n- **exec()** — **podmienia** obraz procesu na nowy program (kod się zmienia, proces zostaje)\n- **wait()** — rodzic **czeka** na zakończenie dziecka\n\n**Stany potomka:** **zombie** (skończył, ale rodzic nie odebrał statusu), **osierocony** (rodzic zniknął).\n\n**⚠️ Na egzaminie:** fork kopiuje, exec zastępuje kod; zombie/osierocony to stany procesu potomnego."
+        },
+        {
+          "term": "Zakleszczenie (deadlock)",
+          "eli5": "To sytuacja, gdy każdy czeka na każdego i nikt się nie rusza — jak auta na skrzyżowaniu, które wzajemnie się blokują. Potrzeba 4 warunków naraz (Coffmana); zerwij choć jeden, a korek znika. Bankier to sposób unikania.",
+          "more": "**Najprościej:** każdy czeka na każdego i nikt się nie rusza — jak auta blokujące się na skrzyżowaniu.\n\n**Cztery warunki Coffmana (muszą zajść WSZYSTKIE):**\n1. **wzajemne wykluczanie** — zasób niepodzielny\n2. **trzymaj i czekaj** — trzymasz jedno, czekasz na drugie\n3. **brak wywłaszczania** — nie można siłą odebrać zasobu\n4. **cykliczne oczekiwanie** — koło czekających\n\n**Strategie:** zapobieganie (zerwij 1 warunek), **unikanie** (algorytm bankiera), wykrywanie i usuwanie, ignorowanie.\n\n**⚠️ Na egzaminie:** zerwanie choć jednego z 4 warunków usuwa deadlock; bankier = unikanie."
+        },
+        {
+          "term": "Łączenie statyczne i dynamiczne",
+          "eli5": "Statyczne = wkładasz bibliotekę na stałe do programu (duży, ale samodzielny plik). Dynamiczne = program pożycza wspólną bibliotekę (.dll/.so) dopiero przy uruchomieniu (mniejszy plik, łatwa aktualizacja).",
+          "more": "**Najprościej:** wkładasz bibliotekę na stałe do programu albo pożyczasz wspólną przy starcie.\n\n**Statyczne —** biblioteka **wkompilowana** w plik wykonywalny. Plik **większy**, ale **samodzielny**. Aktualizacja biblioteki = rekompilacja.\n\n**Dynamiczne —** biblioteka (`.so`/`.dll`) ładowana przy uruchomieniu/działaniu, **współdzielona** między programami. Plik **mniejszy**, łatwa aktualizacja — ale zależność od wersji (słynne „DLL hell\").\n\n**⚠️ Na egzaminie:** dynamiczne = współdzielenie i mniejszy plik; statyczne = samodzielność."
+        }
+      ]
+    },
+    {
+      "title": "14. Sieci komputerowe",
+      "items": [
+        {
+          "term": "Adresacja IP",
+          "eli5": "Adres IP to jak adres pocztowy: hierarchiczny (miasto + ulica + dom), więc listonosz-router wie, dokąd kierować. IPv4 ma 32 bity, IPv6 aż 128 bitów (bo adresów IPv4 zabrakło).",
+          "more": "**Najprościej:** adres IP to jak adres pocztowy — hierarchiczny, więc router (listonosz) wie, dokąd kierować.\n\n**Cechy:** adres **logiczny** warstwy sieciowej (L3), **hierarchiczny** (część sieci + część hosta), **routowalny**.\n\n**IPv4 —** 32 bity (4 oktety), maska/prefiks (**CIDR**), adresy prywatne/publiczne, **NAT**.\n**IPv6 —** 128 bitów (bo adresów IPv4 zabrakło).\n\n**⚠️ Na egzaminie:** IP logiczny i hierarchiczny (routing po prefiksie); MAC płaski i fizyczny."
+        },
+        {
+          "term": "Adresacja MAC",
+          "eli5": "MAC to numer seryjny karty sieciowej, przyklejony na stałe w fabryce. Jest 'płaski' (bez hierarchii) i działa tylko lokalnie — router go nie przenosi między sieciami.",
+          "more": "**Najprościej:** MAC to numer seryjny karty sieciowej, przyklejony na stałe w fabryce.\n\n**Cechy:** adres **fizyczny** warstwy łącza (L2), **płaski** (bez hierarchii), przypisany karcie sieciowej, **lokalny** dla segmentu — **nie routowalny**.\n\n**Zasięg:** działa w obrębie sieci lokalnej / domeny rozgłoszeniowej. Router go nie przenosi dalej.\n\n**⚠️ Na egzaminie:** MAC nie jest routowalny; działa w obrębie sieci lokalnej."
+        },
+        {
+          "term": "Struktura adresu MAC",
+          "eli5": "MAC ma 48 bitów (6 bajtów, zapis hex). Pierwsze 3 bajty (OUI) mówią, który producent zrobił kartę, ostatnie 3 to numer konkretnej sztuki. Same jedynki (FF:FF:...) = 'do wszystkich' (broadcast).",
+          "more": "**Najprościej:** 48 bitów (6 bajtów, zapis szesnastkowy) podzielonych na „producenta\" i „numer sztuki\".\n\n**Budowa:**\n- pierwsze **3 bajty = OUI** — identyfikator producenta (nadaje IEEE)\n- ostatnie **3 bajty** — numer nadany przez producenta\n\n**Specjalne bity** w pierwszym bajcie: I/G (indywidualny/grupowy), U/L (uniwersalny/lokalny).\n**Broadcast:** same jedynki — `FF:FF:FF:FF:FF:FF`.\n\n**⚠️ Na egzaminie:** MAC = 48 bitów; OUI (pierwsze 3 bajty) identyfikuje producenta."
+        },
+        {
+          "term": "DHCP i SLAAC",
+          "eli5": "Gdy podłączasz urządzenie, DHCP to recepcjonista, który daje mu adres IP, maskę i bramę na wynajem. W IPv6 urządzenie może też samo ułożyć sobie adres z podpowiedzi routera (SLAAC — bezstanowo).",
+          "more": "**Najprościej:** dwa sposoby, żeby urządzenie samo dostało adres, gdy je podłączysz.\n\n**DHCP —** serwer (recepcjonista) przydziela **IP, maskę, bramę, DNS** na wynajem (**dzierżawa**). To **stanowe** przydzielanie.\n\n**SLAAC (IPv6) —** urządzenie samo **układa sobie adres** z prefiksu ogłaszanego przez router. To **bezstanowe** (router nie prowadzi listy przydziałów).\n\nDodatkowo: APIPA / link-local (adres awaryjny bez serwera).\n\n**⚠️ Na egzaminie:** DHCP = stanowe przydzielanie; SLAAC = bezstanowe w IPv6."
+        },
+        {
+          "term": "TCP i UDP",
+          "eli5": "TCP to list polecony z potwierdzeniem odbioru — pewny, że dojdzie, ale wolniejszy. UDP to zwykła pocztówka — szybka i lekka, ale bez gwarancji, że doleci (dobre do filmów na żywo, gier).",
+          "more": "**Najprościej:** list polecony z potwierdzeniem kontra zwykła pocztówka.\n\n**TCP —** **połączeniowy**, **niezawodny**: potwierdzenia, retransmisje, numeracja, kontrola przepływu i przeciążenia. Strumień danych. **Wolniejszy**, ale pewny.\n\n**UDP —** **bezpołączeniowy**, **zawodny**: bez potwierdzeń, mały narzut, **szybki**. Dobry do VoIP, streamingu, gier, DNS.\n\n**⚠️ Na egzaminie:** TCP niezawodny i połączeniowy; UDP szybki, bez gwarancji dostarczenia."
+        },
+        {
+          "term": "Routing IP (longest prefix match)",
+          "eli5": "Router patrzy w swoją tabelę tras i wybiera najbardziej pasujący, najdokładniejszy adres (najdłuższy pasujący prefiks). Jak nic nie pasuje, wysyła do 'bramy domyślnej' — czyli 'nie wiem, spytaj tego'.",
+          "more": "**Najprościej:** router patrzy w swoją tablicę tras i wybiera **najbardziej pasujący, najdokładniejszy** wpis.\n\n**Jak decyduje:**\n1. porównuje adres docelowy z wpisami w **tablicy routingu**\n2. wybiera regułą **najdłuższego pasującego prefiksu** (im dłuższy pasujący prefiks, tym dokładniejsza trasa)\n3. przekazuje do **next-hop**; jeśli nic nie pasuje → **brama domyślna**\n\n**⚠️ Na egzaminie:** wybór trasy = najdłuższy pasujący prefiks; brak trasy → brama domyślna."
+        },
+        {
+          "term": "VLAN",
+          "eli5": "To dzielenie jednej fizycznej sieci na osobne, niewidzące się grupy — jak przegródki w jednym pudełku. Zwiększa porządek i bezpieczeństwo. Żeby grupy pogadały, potrzebny jest router.",
+          "more": "**Najprościej:** dzielenie jednej fizycznej sieci na osobne, niewidzące się grupy — jak przegródki w pudełku.\n\n**Co to daje:** logiczny podział L2 na odrębne **domeny rozgłoszeniowe** niezależnie od okablowania (znakowanie ramek **802.1Q**).\n\n**Zalety:** segmentacja, bezpieczeństwo, mniej broadcastu, elastyczność.\n\n**Ważne:** ruch **między** VLAN-ami wymaga **routera / urządzenia L3**.\n\n**⚠️ Na egzaminie:** VLAN dzieli domeny rozgłoszeniowe; komunikacja między VLAN wymaga routingu."
+        },
+        {
+          "term": "Protokoły routingu (IGP/EGP)",
+          "eli5": "IGP działają wewnątrz jednej firmy/sieci (RIP, OSPF). EGP łączą różne sieci-państwa (BGP spina cały internet). RIP pyta sąsiadów o odległości, OSPF ma pełną mapę i liczy trasy Dijkstrą.",
+          "more": "**Najprościej:** jedne protokoły działają wewnątrz jednej sieci-firmy, inne spinają różne sieci-państwa.\n\n**Wg zasięgu:**\n- **IGP** — wewnątrz systemu autonomicznego (RIP, OSPF, EIGRP)\n- **EGP** — między systemami autonomicznymi (**BGP** — spina cały internet)\n\n**Wg algorytmu:**\n- **wektor odległości** (RIP) — wymiana tablic z sąsiadami („ile masz do X?\")\n- **stan łącza** (OSPF) — pełna mapa topologii, trasy liczone **Dijkstrą**\n\n**⚠️ Na egzaminie:** OSPF = link-state; RIP = distance-vector; BGP = między systemami autonomicznymi."
+        },
+        {
+          "term": "ARP (IP → MAC)",
+          "eli5": "Gdy znasz czyjś adres IP, ale nie MAC, ARP krzyczy do sieci lokalnej: 'kto ma ten IP?'. Właściciel odpowiada swoim MAC-iem, a odpowiedź zostaje zapisana na później.",
+          "more": "**Najprościej:** znasz czyjś adres IP, ale nie MAC — ARP to krzyk po sieci lokalnej „kto ma ten IP?\".\n\n**Jak działa:**\n1. rozgłoszenie (**broadcast**): „kto ma IP `x.x.x.x`?\"\n2. właściciel odpowiada swoim **MAC**\n3. odpowiedź trafia do **tablicy ARP** (buforowanie na później)\n\n**Zasięg:** tylko sieć **lokalna**. W IPv6 zastępuje to **NDP**.\n\n**⚠️ Na egzaminie:** ARP mapuje IP→MAC przez broadcast; działa w sieci lokalnej."
+        },
+        {
+          "term": "STP (drzewo rozpinające)",
+          "eli5": "Gdy w sieci są zapasowe kable, dane mogłyby krążyć w kółko bez końca (pętla). STP wybiera 'głównego' przełącznika i blokuje nadmiarowe drogi, zostawiając jedną bez pętli. Gdy kabel padnie — odblokowuje zapas.",
+          "more": "**Najprościej:** gdy w sieci są zapasowe kable, dane mogłyby krążyć w kółko bez końca — STP temu zapobiega.\n\n**Problem:** redundantne łącza L2 tworzą **pętle** (ramki krążą w nieskończoność, broadcast storm).\n\n**Co robi STP (802.1d):**\n1. wybiera **root bridge** (most o najniższym Bridge ID)\n2. liczy najkrótsze ścieżki do roota\n3. **blokuje** nadmiarowe łącza → zostaje drzewo bez pętli\n\n**Awaria łącza →** rekonfiguracja (odblokowuje zapas).\n\n**⚠️ Na egzaminie:** STP eliminuje pętle L2, blokując porty; most główny wybierany wg Bridge ID."
+        }
+      ]
+    },
+    {
+      "title": "15. Systemy rozproszone",
+      "items": [
+        {
+          "term": "Teoria CAP",
+          "eli5": "Gdy dane są w wielu kopiach na wielu serwerach, nie możesz mieć naraz wszystkich trzech: pełnej spójności (C), pełnej dostępności (A) i odporności na zerwaną sieć (P). Gdy sieć się zerwie, musisz wybrać: C albo A.",
+          "more": "**Najprościej:** gdy dane są w wielu kopiach na wielu serwerach, nie da się mieć naraz wszystkich trzech dobrych rzeczy.\n\n**Trzy litery:**\n- **C (Consistency)** — każdy odczyt widzi najnowszy zapis\n- **A (Availability)** — każde żądanie dostaje odpowiedź\n- **P (Partition tolerance)** — system działa mimo zerwanej sieci między węzłami\n\n**Twierdzenie:** przy **podziale sieci (P)** musisz wybrać: **C albo A**. W praktyce P jest nieunikniona, więc realny wybór to CP lub AP.\n\n**⚠️ Na egzaminie:** w razie partycji poświęcasz C lub A; P jest praktycznie nieunikniona."
+        },
+        {
+          "term": "Middleware (warstwa pośrednicząca)",
+          "eli5": "To tłumacz-pośrednik między aplikacją a siecią. Ukrywa, że komputery są różne i daleko od siebie, i załatwia rozmowy między nimi (zdalne wywołania, nazwy, bezpieczeństwo).",
+          "more": "**Najprościej:** tłumacz-pośrednik między aplikacją a siecią/systemem, który ukrywa cały bałagan rozproszenia.\n\n**Co załatwia:**\n- ukrywa **heterogeniczność** (różne maszyny, systemy) i szczegóły komunikacji\n- zapewnia **przezroczystość**\n- zdalne wywołania (**RPC/RMI**), nazewnictwo, synchronizację, bezpieczeństwo, transakcje\n\n**⚠️ Na egzaminie:** middleware = warstwa ukrywająca rozproszenie i ułatwiająca komunikację."
+        },
+        {
+          "term": "Systemy reaktywne (Reactive Manifesto)",
+          "eli5": "Cztery cechy dobrego systemu: Responsywny (szybko odpowiada), Odporny (przeżyje awarię), Elastyczny (rośnie i maleje z obciążeniem) i oparty na Wiadomościach (części gadają luźno przez komunikaty). Wiadomości są fundamentem.",
+          "more": "**Najprościej:** cztery cechy dobrze zaprojektowanego, odpornego systemu — a fundamentem są wiadomości.\n\n**Cztery cechy:**\n1. **Responsive** — szybko odpowiada\n2. **Resilient** — odporny na awarie (izolacja, replikacja)\n3. **Elastic** — skaluje się z obciążeniem (rośnie i maleje)\n4. **Message-driven** — oparty na **asynchronicznych komunikatach** (luźne powiązanie)\n\n**Zależność:** z przesyłania komunikatów wynika elastyczność i odporność, a ich efektem jest responsywność.\n\n**⚠️ Na egzaminie:** fundament = message-driven; efektem końcowym jest responsywność."
+        },
+        {
+          "term": "Zegar Lamporta",
+          "eli5": "Gdy komputery nie mają wspólnego zegara, używają licznika: każde zdarzenie zwiększa go, a przy odbiorze wiadomości ustawiasz max(swój, otrzymany)+1. Gwarantuje: jeśli A było przyczyną B, to A ma mniejszy numer.",
+          "more": "**Najprościej:** licznik porządkujący zdarzenia, gdy komputery nie mają wspólnego zegara.\n\n**Reguły (krok po kroku):**\n1. przy każdym zdarzeniu **zwiększ** swój licznik\n2. przy **wysłaniu** wiadomości dołącz do niej swój licznik\n3. przy **odbiorze**: `zegar = max(lokalny, otrzymany) + 1`\n\n**Gwarancja:** jeśli `a → b` (a jest przyczyną b), to `L(a) < L(b)`. **Uwaga:** odwrotność nie zachodzi — mniejszy numer nie dowodzi przyczynowości.\n\n**Ograniczenie:** nie wykrywa **współbieżności** (od tego są zegary wektorowe).\n\n**⚠️ Na egzaminie:** daje porządek częściowy zgodny z przyczynowością; nie wykrywa zdarzeń współbieżnych."
+        },
+        {
+          "term": "Wzorzec REST",
+          "eli5": "To styl usług sieciowych po HTTP: bezstanowy (każda prośba niesie wszystko, serwer nie pamięta poprzedniej), a rzeczy to 'zasoby' pod adresami URI, które czytasz/tworzysz/usuwasz metodami GET/POST/PUT/DELETE.",
+          "more": "**Najprościej:** styl usług sieciowych po HTTP, gdzie serwer nie pamięta twoich poprzednich żądań.\n\n**Kluczowe cechy:**\n- **bezstanowość** — każde żądanie jest kompletne (serwer nie trzyma stanu sesji)\n- **zasoby** identyfikowane przez **URI**\n- operacje **metodami HTTP**: `GET`, `POST`, `PUT`, `DELETE`\n- reprezentacje w JSON/XML, jednolity interfejs, klient-serwer, cache\n\n**⚠️ Na egzaminie:** REST jest bezstanowy i zasobowy; stan sesji nie jest trzymany po stronie serwera."
+        },
+        {
+          "term": "Przezroczystość",
+          "eli5": "To ukrywanie przed użytkownikiem, że system jest rozproszony. Np. przezroczystość położenia = nie musisz wiedzieć, na którym serwerze fizycznie leży twój plik — po prostu działa.",
+          "more": "**Najprościej:** ukrywanie przed użytkownikiem, że system jest rozproszony — ma po prostu „działać\".\n\n**Typy przezroczystości:**\n- **dostępu** — jednolity dostęp lokalny i zdalny\n- **położenia** — nie wiesz, gdzie fizycznie jest zasób\n- **migracji** — zasób może się przenieść niezauważenie\n- **replikacji**, **współbieżności**, **awarii**, **skalowania**\n\n**⚠️ Na egzaminie:** przezroczystość położenia = użytkownik nie zna fizycznej lokalizacji zasobu."
+        },
+        {
+          "term": "Gniazda (sockets)",
+          "eli5": "To końcówka do rozmowy przez sieć = adres IP + port (jak numer domu + numer mieszkania). Strumieniowe (TCP) są pewne, datagramowe (UDP) szybkie. Niski poziom — dużo trzeba ogarnąć ręcznie.",
+          "more": "**Najprościej:** końcówka do rozmowy przez sieć = **adres IP + port** (numer domu + numer mieszkania).\n\n**Dwa typy:**\n- **strumieniowe (TCP)** — niezawodne, połączeniowe\n- **datagramowe (UDP)** — szybkie, bezpołączeniowe\n\n**Zalety:** uniwersalność, kontrola.\n**Wady:** niski poziom — sam ogarniasz błędy i serializację.\n\n**⚠️ Na egzaminie:** gniazdo = IP + port; TCP-socket niezawodny, UDP-socket szybki."
+        }
+      ]
+    },
+    {
+      "title": "16. Teoria automatów i języków formalnych",
+      "items": [
+        {
+          "term": "Klasyfikacja Chomsky'ego",
+          "eli5": "To drabinka języków wg trudności: Typ 3 (regularne) — najprostsze, radzi sobie z nimi automat skończony. Typ 2 (bezkontekstowe) — automat ze stosem. Typ 1 (kontekstowe) i Typ 0 (najogólniejsze) — maszyna Turinga. Każdy wyższy zawiera niższe.",
+          "more": "**Najprościej:** drabinka języków wg trudności — im niższy typ, tym potężniejsza maszyna potrzebna.\n\n**Cztery typy (od najprostszych):**\n- **Typ 3 — regularne:** automat **skończony**\n- **Typ 2 — bezkontekstowe:** automat ze **stosem**\n- **Typ 1 — kontekstowe:** automat liniowo ograniczony\n- **Typ 0 — rekurencyjnie przeliczalne:** **maszyna Turinga**\n\n**Zawieranie:** regularne ⊂ bezkontekstowe ⊂ kontekstowe ⊂ rekurencyjnie przeliczalne.\n\n**⚠️ Na egzaminie:** typ 3 = automat skończony, typ 2 = stosowy; każdy wyższy typ zawiera niższe."
+        },
+        {
+          "term": "Postać normalna Chomsky'ego (CNF)",
+          "eli5": "To uporządkowanie reguł gramatyki tak, że każda ma postać: A→BC (dwa symbole) albo A→a (jedna literka). Dzięki temu można użyć algorytmu CYK do sprawdzania, czy słowo należy do języka.",
+          "more": "**Najprościej:** uporządkowanie reguł gramatyki bezkontekstowej do dwóch prostych wzorów.\n\n**Dozwolone produkcje:**\n- `A → BC` — dokładnie **dwa nieterminale**\n- `A → a` — dokładnie **jeden terminal**\n\n**Po co:** umożliwia algorytm **CYK** rozpoznawania słów w czasie `O(n³)`.\n\n**⚠️ Na egzaminie:** CNF = produkcje do dwóch nieterminali albo jednego terminala; podstawa CYK."
+        },
+        {
+          "term": "Postać normalna Greibach (GNF)",
+          "eli5": "To reguły, gdzie prawa strona ZAWSZE zaczyna się od literki-terminala. Dzięki temu nie ma 'kręcenia się w kółko' po lewej (rekurencji lewostronnej) i łatwiej parsować z góry na dół.",
+          "more": "**Najprościej:** reguły, w których prawa strona **zawsze zaczyna się od terminala**.\n\n**Postać:** `A → aα`, gdzie `a` to terminal, a `α` to (możliwie pusty) ciąg nieterminali.\n\n**Zaleta:** terminal na początku → **brak rekurencji lewostronnej** → wygodna analiza **zstępująca** (top-down).\n\n**⚠️ Na egzaminie:** GNF zaczyna prawą stronę terminalem; eliminuje rekurencję lewostronną."
+        },
+        {
+          "term": "Wieloznaczność gramatyki",
+          "eli5": "Gramatyka jest wieloznaczna, gdy jedno zdanie da się rozłożyć na drzewko na więcej niż jeden sposób — jak zdanie, które można rozumieć dwojako. To problem przy parsowaniu (np. słynny 'dangling else').",
+          "more": "**Najprościej:** gramatyka jest wieloznaczna, gdy jedno zdanie da się rozłożyć na **więcej niż jedno** drzewo.\n\n**Definicja:** istnieje słowo z ≥2 drzewami wyprowadzenia (lub ≥2 skrajnie lewymi wyprowadzeniami).\n\n**Problem praktyczny:** utrudnia parsowanie — klasyczny przykład **„dangling else\"** (do którego `if` należy `else`?).\n\n**Trudność:** niektóre języki są **istotnie wieloznaczne** (nie mają żadnej jednoznacznej gramatyki); ogólne sprawdzenie wieloznaczności jest **nierozstrzygalne**.\n\n**⚠️ Na egzaminie:** wieloznaczność = ≥2 drzewa wywodu dla jednego słowa."
+        }
+      ]
+    },
+    {
+      "title": "17. Teoria obliczeń i złożoności",
+      "items": [
+        {
+          "term": "Problem stopu",
+          "eli5": "Czy da się zbudować program, który dla KAŻDEGO innego programu powie z góry 'zatrzyma się czy będzie kręcił się wiecznie'? Turing udowodnił: NIE DA SIĘ. To granica tego, co komputery mogą rozstrzygnąć.",
+          "more": "**Najprościej:** czy da się zbudować program, który dla KAŻDEGO innego programu powie z góry „zatrzyma się czy będzie kręcił się wiecznie\"? Nie da się.\n\n**Wynik:** problem stopu jest **nierozstrzygalny** — nie istnieje ogólny algorytm rozstrzygający zatrzymanie.\n\n**Dowód (idea):** Turing, przez **przekątniową sprzeczność** — zakładasz, że taki program istnieje, i budujesz przypadek, który mu przeczy.\n\n**Znaczenie:** fundamentalna **granica obliczalności**.\n\n**⚠️ Na egzaminie:** brak ogólnego algorytmu na zatrzymanie; klasyczny problem nierozstrzygalny."
+        },
+        {
+          "term": "P vs NP",
+          "eli5": "P = zadania, które da się szybko ROZWIĄZAĆ. NP = zadania, których rozwiązanie da się szybko SPRAWDZIĆ (jak sprawdzenie gotowego sudoku). Wielka zagadka: czy 'łatwe do sprawdzenia' znaczy 'łatwe do rozwiązania'? Nikt nie wie.",
+          "more": "**Najprościej:** czy „łatwe do sprawdzenia\" znaczy „łatwe do rozwiązania\"? Nikt tego nie wie.\n\n**Klasy:**\n- **P —** problemy **rozwiązywalne** w czasie wielomianowym\n- **NP —** problemy, których rozwiązanie da się **zweryfikować** w czasie wielomianowym (jak sprawdzenie gotowego sudoku)\n\n**Pytanie tysiąclecia:** czy `P = NP`? (nierozstrzygnięte)\n\n**NP-zupełne —** najtrudniejsze w NP; jeśli KTÓRYKOLWIEK jest w P, to `P = NP`. Pierwszy taki: **SAT** (twierdzenie Cooka-Levina).\n\n**⚠️ Na egzaminie:** NP = łatwa weryfikacja, niekoniecznie łatwe znajdowanie; SAT pierwszy NP-zupełny."
+        },
+        {
+          "term": "Rozstrzygalność",
+          "eli5": "Problem rozstrzygalny = istnieje algorytm, który zawsze się zatrzyma i powie TAK albo NIE. Częściowo rozstrzygalny = powie TAK, gdy tak, ale przy NIE może kręcić się bez końca (jak problem stopu).",
+          "more": "**Najprościej:** czy istnieje algorytm, który zawsze da odpowiedź TAK/NIE i się zatrzyma.\n\n**Rozstrzygalny —** istnieje algorytm **zawsze kończący się** poprawną odpowiedzią TAK/NIE.\n\n**Częściowo rozstrzygalny (rekurencyjnie przeliczalny) —** algorytm zatrzymuje się i mówi „TAK\", gdy odpowiedź to TAK, ale przy „NIE\" może **kręcić się w nieskończoność**.\n\n**Przykład:** problem stopu jest r.p. (półrozstrzygalny), ale **nierozstrzygalny**.\n\n**⚠️ Na egzaminie:** rozstrzygalny = zawsze się zatrzymuje z odpowiedzią."
+        },
+        {
+          "term": "Złożoność problemu vs algorytmu",
+          "eli5": "Złożoność algorytmu to koszt jednej konkretnej metody. Złożoność problemu to najlepszy możliwy koszt jakiejkolwiek metody — dolna granica, poniżej której nie da się zejść.",
+          "more": "**Najprościej:** koszt jednej konkretnej metody kontra najlepszy możliwy koszt dla całego problemu.\n\n**Złożoność algorytmu —** zasoby (czas, pamięć) zużywane przez **konkretną metodę**.\n\n**Złożoność problemu —** **najlepsza możliwa** złożoność jakiegokolwiek algorytmu rozwiązującego ten problem (dolna granica, poniżej której się nie da).\n\nBada się: dolne granice, przypadek najgorszy/średni.\n\n**⚠️ Na egzaminie:** złożoność problemu = najlepsza możliwa; złożoność algorytmu = konkretnej metody."
+        },
+        {
+          "term": "Klasy złożoności",
+          "eli5": "To szufladki wg zużycia zasobów: P (szybki czas), NP (szybkie sprawdzenie), PSPACE (mało pamięci), EXPTIME (wolne). Układają się jeden w drugim: P ⊆ NP ⊆ PSPACE ⊆ EXPTIME.",
+          "more": "**Najprościej:** szufladki grupujące problemy wg zużycia czasu i pamięci.\n\n**Najważniejsze:**\n- **P** — czas wielomianowy\n- **NP** — weryfikacja wielomianowa\n- **PSPACE** — pamięć wielomianowa\n- **EXPTIME** — czas wykładniczy\n- **L / NL** — pamięć logarytmiczna\n\n**Zawierania:** `P ⊆ NP ⊆ PSPACE ⊆ EXPTIME`. Wiadomo, że `P ⊊ EXPTIME`.\n\n**⚠️ Na egzaminie:** znaj inkluzje; NP ⊆ PSPACE."
+        },
+        {
+          "term": "Maszyna Turinga",
+          "eli5": "To najprostszy wyobrażalny komputer: nieskończona taśma, głowica, która czyta i pisze, oraz zbiór reguł. To wzorzec 'co w ogóle da się policzyć' (teza Churcha-Turinga).",
+          "more": "**Najprościej:** najprostszy wyobrażalny komputer, definiujący, co w ogóle da się policzyć.\n\n**Budowa:**\n- nieskończona **taśma** (pamięć)\n- **głowica** — czyta, pisze, przesuwa się\n- zbiór **stanów** i **funkcja przejścia**\n\n**Znaczenie:** podstawa **tezy Churcha-Turinga** (definicja obliczalności).\n\n**Warianty (równoważne co do mocy):** deterministyczna, niedeterministyczna, wielotaśmowa.\n\n**⚠️ Na egzaminie:** MT = model obliczalności; niedeterministyczna nie jest silniejsza, tylko potencjalnie szybsza."
+        },
+        {
+          "term": "Dowodzenie przynależności do klasy (redukcja)",
+          "eli5": "Żeby pokazać, że problem jest trudny (np. NP-zupełny), 'przerabiasz' znany trudny problem na swój (redukcja). Zupełność = pokazujesz, że problem jest i w danej klasie, i tak trudny jak najtrudniejsze w niej.",
+          "more": "**Najprościej:** żeby pokazać, że problem jest trudny, „przerabiasz\" na niego znany trudny problem.\n\n**Dwie części dowodu:**\n1. **Przynależność (membership)** — wskaż algorytm o danym zasobie (np. „to jest w NP, bo weryfikuję w czasie wielomianowym\")\n2. **Trudność (hardness)** — **redukcja wielomianowa** znanego trudnego problemu **do** badanego\n\n**Zupełność = przynależność + trudność.** Np. NP-zupełność: pokaż, że problem jest w NP, i zredukuj do niego SAT (lub inny NP-zupełny).\n\n**⚠️ Na egzaminie:** NP-zupełność = w NP + redukcja z problemu już NP-zupełnego."
+        },
+        {
+          "term": "PSPACE a gry (QBF)",
+          "eli5": "Ustalenie, kto wygra w wielu grach dwuosobowych (uogólnione szachy, go) jest PSPACE-trudne. To pasuje do formuł typu 'istnieje mój ruch, taki że dla KAŻDEGO ruchu wroga, istnieje mój...' — naprzemienne 'istnieje/dla każdego'.",
+          "more": "**Najprościej:** ustalenie zwycięzcy w wielu grach dwuosobowych z pełną informacją to problem klasy PSPACE.\n\n**Dlaczego:** uogólnione szachy, go, geografia — ich rozstrzyganie jest **PSPACE-zupełne**.\n\n**Związek z logiką (QBF):** odpowiada **kwantyfikowanym formułom logicznym** z naprzemiennymi kwantyfikatorami: „**istnieje** mój ruch, taki że **dla każdego** ruchu przeciwnika **istnieje** mój...\". QBF jest **PSPACE-zupełny**.\n\n**⚠️ Na egzaminie:** naprzemienne kwantyfikatory `∃∀∃…` = istota PSPACE; QBF jest PSPACE-zupełny."
+        }
+      ]
+    },
+    {
+      "title": "18. Teoria współbieżności",
+      "items": [
+        {
+          "term": "Algebra CSP",
+          "eli5": "To sposób opisu procesów, które rozmawiają przez kanały 'twarzą w twarz' (rendez-vous): nadawca i odbiorca muszą spotkać się w tym samym momencie. Bez wspólnej pamięci — tylko przekazywanie wiadomości (jak kanały w Go).",
+          "more": "**Najprościej:** opis procesów współbieżnych, które rozmawiają przez kanały „twarzą w twarz\".\n\n**Kluczowa idea:** komunikacja przez **synchroniczne kanały** (**rendez-vous**) — nadawca i odbiorca **czekają na siebie** i wymieniają dane w jednym momencie. **Brak dzielonej pamięci.**\n\n**Operatory:** prefiks, wybór, komunikacja, kompozycja równoległa.\n\n**Dziedzictwo:** kanały w językach Go i occam.\n\n**⚠️ Na egzaminie:** CSP = komunikacja przez synchroniczne kanały (spotkanie), bez wspólnej pamięci."
+        },
+        {
+          "term": "Sieci Petriego",
+          "eli5": "To rysunek z kółkami (miejsca z żetonami) i prostokątami (zdarzenia). Zdarzenie 'odpala', gdy w kółkach przed nim jest dość żetonów — wtedy żetony się przesuwają. Świetne do modelowania współbieżności i zakleszczeń. Macierz incydencji = wyjścia − wejścia.",
+          "more": "**Najprościej:** rysunek z kółkami (miejsca z żetonami) i prostokątami (tranzycje = zdarzenia), modelujący współbieżność.\n\n**Jak działa:**\n- **miejsca** przechowują **żetony** (rozmieszczenie żetonów = **znakowanie / marking**)\n- **tranzycja** jest **aktywna (odpala)**, gdy miejsca wejściowe mają dość żetonów\n- odpalenie **przesuwa** żetony (zabiera z wejść, dokłada do wyjść)\n\n**Opis macierzowy:** macierze wejść, wyjść i **incydencji** `C = wyjścia − wejścia`; równanie stanu.\n\n**Do czego:** modeluje współbieżność, synchronizację, konflikty, zakleszczenia.\n\n**⚠️ Na egzaminie:** macierz incydencji = wyjścia − wejścia; marking = rozmieszczenie żetonów."
+        },
+        {
+          "term": "Relacja happened-before",
+          "eli5": "To porządek 'co było przed czym'. W jednym procesie zdarzenia są po kolei; wysłanie wiadomości jest przed jej odebraniem. Jeśli dwóch zdarzeń nie da się tak ustawić, są współbieżne (dzieją się 'obok siebie').",
+          "more": "**Najprościej:** porządek „co na pewno było przed czym\" w systemie rozproszonym.\n\n**Reguły relacji `→`:**\n1. zdarzenia w **jednym procesie** są uporządkowane (po kolei)\n2. **wysłanie** komunikatu `→` jego **odebranie**\n3. **przechodniość** (jeśli `a→b` i `b→c`, to `a→c`)\n\n**Współbieżność:** zdarzenia **nieporównywalne** tą relacją są **współbieżne** (dzieją się „obok siebie\").\n\n**To porządek CZĘŚCIOWY** — nie każde dwa zdarzenia da się porównać. Podstawa zegarów logicznych.\n\n**⚠️ Na egzaminie:** happened-before = porządek częściowy; brak relacji = współbieżność."
+        },
+        {
+          "term": "Współbieżność a równoległość",
+          "eli5": "Współbieżność to żonglowanie wieloma zadaniami naraz — nawet jeden kucharz może gotować kilka dań, przełączając się. Równoległość to naprawdę kilku kucharzy pracujących jednocześnie (wymaga wielu rdzeni).",
+          "more": "**Najprościej:** żonglowanie wieloma zadaniami kontra faktyczne robienie wielu rzeczy naraz.\n\n**Współbieżność (concurrency) —** **zarządzanie** wieloma zadaniami w tym samym okresie. Mogą przeplatać się na **jednym rdzeniu** (kwestia **struktury** programu). Jeden kucharz gotujący kilka dań, przełączając się.\n\n**Równoległość (parallelism) —** **faktyczne** jednoczesne wykonanie na **wielu** jednostkach (kwestia **wykonania**). Kilku kucharzy naraz.\n\n**⚠️ Na egzaminie:** współbieżność ≠ równoległość; współbieżny możesz być na 1 rdzeniu, równoległość wymaga wielu."
+        }
+      ]
+    }
+  ]
+}

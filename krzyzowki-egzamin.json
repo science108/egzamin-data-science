@@ -1,0 +1,242 @@
+{
+  "puzzles": [
+    {
+      "title": "1. Wprowadzenie do systemu UNIX",
+      "words": [
+        {"a": "INODE", "c": "Metryczka pliku w UNIX — trzyma metadane, ale nie nazwę"},
+        {"a": "SYMLINK", "c": "Dowiązanie-wskazówka zawierające ścieżkę do pliku"},
+        {"a": "KERBEROS", "c": "System uwierzytelniania na biletach z KDC"},
+        {"a": "QUOTA", "c": "Limit miejsca na dysku dla użytkownika (soft i hard)"},
+        {"a": "SYSCALL", "c": "Prośba programu do jądra o usługę (przejście user→kernel)"},
+        {"a": "NICE", "c": "Wartość priorytetu procesu — im wyższa, tym niższy priorytet"},
+        {"a": "LDAP", "c": "Protokół katalogowy — hierarchiczna książka adresowa, szybki odczyt"},
+        {"a": "PAM", "c": "Modularny mechanizm uwierzytelniania w Linuksie"},
+        {"a": "ACL", "c": "Rozszerzone prawa dostępu dla konkretnych użytkowników"},
+        {"a": "PIPE", "c": "Jednokierunkowa rura do komunikacji między procesami"}
+      ]
+    },
+    {
+      "title": "2. Wstęp do informatyki",
+      "words": [
+        {"a": "LAMBDA", "c": "Anonimowa jednowyrażeniowa funkcja w Pythonie"},
+        {"a": "REKURENCJA", "c": "Funkcja wywołująca samą siebie"},
+        {"a": "EBNF", "c": "Notacja zapisu gramatyki: [] {} | ()"},
+        {"a": "SKLADNIA", "c": "Forma zapisu programu (nie jego znaczenie)"},
+        {"a": "SEMANTYKA", "c": "Znaczenie konstrukcji językowych"},
+        {"a": "FLOAT", "c": "Typ zmiennoprzecinkowy — nie zapisze 0.1 idealnie"},
+        {"a": "TABLICA", "c": "Typ strukturalny homogeniczny (same jednakowe elementy)"},
+        {"a": "STRUKTURA", "c": "Typ heterogeniczny — pola różnych typów"}
+      ]
+    },
+    {
+      "title": "3. Algorytmy i struktury danych",
+      "words": [
+        {"a": "QUICKSORT", "c": "Sortowanie w miejscu, średnio n log n, pesymistycznie n²"},
+        {"a": "MERGESORT", "c": "Sortowanie przez scalanie — zawsze n log n, stabilne"},
+        {"a": "DIJKSTRA", "c": "Najkrótsza ścieżka z jednego źródła, wagi nieujemne"},
+        {"a": "GREEDY", "c": "Algorytm zachłanny — wybór lokalnie najlepszy, bez cofania"},
+        {"a": "MINCUT", "c": "Minimalny przekrój = wartość maksymalnego przepływu"},
+        {"a": "MACIERZ", "c": "Reprezentacja grafu: sprawdzenie krawędzi O(1), dużo pamięci"},
+        {"a": "HEAPSORT", "c": "Sortowanie kopcowe — n log n w miejscu, niestabilne"},
+        {"a": "HUFFMAN", "c": "Zachłanny kod dający optimum (kompresja)"}
+      ]
+    },
+    {
+      "title": "4. Programowanie imperatywne",
+      "words": [
+        {"a": "PREPROCESOR", "c": "Pierwszy etap: rozwija #include i #define"},
+        {"a": "LINKER", "c": "Łączy pliki obiektowe i biblioteki w program (błąd 'undefined reference')"},
+        {"a": "PADDING", "c": "Luki wyrównujące pola struktury w pamięci"},
+        {"a": "QSORT", "c": "Uniwersalna funkcja sortująca ze stdlib, wymaga komparatora"},
+        {"a": "STOS", "c": "Tu żyją tablice VLA o rozmiarze ustalanym w runtime"},
+        {"a": "DECAY", "c": "'Rozpad' tablicy do wskaźnika przy przekazaniu do funkcji"}
+      ]
+    },
+    {
+      "title": "5. Programowanie funkcyjne i obiektowe",
+      "words": [
+        {"a": "MONADA", "c": "Sekwencjonuje obliczenia z kontekstem (Maybe, IO)"},
+        {"a": "FUNKTOR", "c": "Pozwala mapować pod strukturą (map)"},
+        {"a": "CURRYING", "c": "Zamiana funkcji wieloargumentowej w łańcuch jednoargumentowych"},
+        {"a": "HERMETYZACJA", "c": "Ukrycie stanu za interfejsem (enkapsulacja)"},
+        {"a": "DZIEDZICZENIE", "c": "Ponowne użycie i hierarchia klas"},
+        {"a": "POLIMORFIZM", "c": "Jeden interfejs, wiele implementacji"},
+        {"a": "LAZY", "c": "Obliczanie odroczone — umożliwia nieskończone listy"},
+        {"a": "OGONOWA", "c": "Rekursja optymalizowana do pętli (TCO)"}
+      ]
+    },
+    {
+      "title": "6. Podstawy baz danych",
+      "words": [
+        {"a": "ACID", "c": "Atomowość, spójność, izolacja, trwałość transakcji"},
+        {"a": "SELEKCJA", "c": "Operacja algebry relacji wybierająca WIERSZE (σ)"},
+        {"a": "PROJEKCJA", "c": "Operacja algebry relacji wybierająca KOLUMNY (π)"},
+        {"a": "NORMALIZACJA", "c": "Eliminacja redundancji przez rozkład tabel"},
+        {"a": "INDEKS", "c": "Struktura (B-drzewo) przyspieszająca SELECT, spowalniająca zapisy"},
+        {"a": "WIDOK", "c": "Wirtualna tabela zdefiniowana zapytaniem"},
+        {"a": "FOREIGN", "c": "Klucz zapewniający integralność referencyjną"},
+        {"a": "PRIMARY", "c": "Klucz główny — unikalny i NOT NULL"},
+        {"a": "JOIN", "c": "Złączenie relacji po warunku (⋈)"}
+      ]
+    },
+    {
+      "title": "7. Technika cyfrowa",
+      "words": [
+        {"a": "KARNAUGH", "c": "Graficzna metoda minimalizacji funkcji logicznych"},
+        {"a": "MULTIPLEKSER", "c": "Wybiera jedno z 2ⁿ wejść na jedno wyjście"},
+        {"a": "HAZARD", "c": "Chwilowy błędny stan przez różne opóźnienia ścieżek"},
+        {"a": "REJESTR", "c": "Zespół przerzutników na słowo bitowe; przesuwny konwertuje szereg↔równolegle"},
+        {"a": "SUMATOR", "c": "Pełny dodaje 3 bity (z carry-in); daje sumę i przeniesienie"},
+        {"a": "PRZERZUTNIK", "c": "Element pamięci 1 bitu (SR, D, JK, T)"},
+        {"a": "MOORE", "c": "Automat, w którym wyjście zależy tylko od stanu"},
+        {"a": "MEALY", "c": "Automat, w którym wyjście zależy od stanu i wejścia"},
+        {"a": "LICZNIK", "c": "Układ zliczający impulsy (synchroniczny szybszy)"}
+      ]
+    },
+    {
+      "title": "8. Technika mikroprocesorowa",
+      "words": [
+        {"a": "DMA", "c": "Transfer danych pamięć↔I/O bez udziału procesora"},
+        {"a": "SRAM", "c": "Szybka pamięć na przerzutnikach, bez odświeżania (cache)"},
+        {"a": "DRAM", "c": "Tania pamięć na kondensatorach, wymaga odświeżania"},
+        {"a": "FLASH", "c": "Pamięć nieulotna kasowana blokami (SSD, pendrive)"},
+        {"a": "RISC", "c": "Proste rozkazy stałej długości, łatwe potokowanie"},
+        {"a": "CISC", "c": "Złożone rozkazy zmiennej długości (x86)"},
+        {"a": "PIPELINING", "c": "Nakładanie faz rozkazów jak taśma produkcyjna"},
+        {"a": "VOLATILE", "c": "Modyfikator wyłączający optymalizację odczytów zmiennej"}
+      ]
+    },
+    {
+      "title": "9. Architektura komputerów",
+      "words": [
+        {"a": "CACHE", "c": "Szybka mała pamięć wykorzystująca lokalność odwołań"},
+        {"a": "AMDAHL", "c": "Prawo: część sekwencyjna ogranicza przyspieszenie"},
+        {"a": "GUSTAFSON", "c": "Prawo optymistyczne — skalowany rozmiar zadania"},
+        {"a": "LINPACK", "c": "Benchmark mocy FLOPS, podstawa listy TOP500"},
+        {"a": "HPCG", "c": "Benchmark rzadkich macierzy — obciąża pamięć, realistyczny"},
+        {"a": "FLYNN", "c": "Taksonomia: SISD, SIMD, MISD, MIMD"},
+        {"a": "SIMD", "c": "Jedna instrukcja, wiele danych (GPU, wektory)"},
+        {"a": "MIMD", "c": "Wiele instrukcji i danych (klaster wielordzeniowy)"}
+      ]
+    },
+    {
+      "title": "10. Inżynieria oprogramowania",
+      "words": [
+        {"a": "WATERFALL", "c": "Model kaskadowy — sekwencyjne fazy, słaby przy zmianach"},
+        {"a": "SCRUM", "c": "Zwinna metodyka ze sprintami i rolami"},
+        {"a": "KANBAN", "c": "Ciągły przepływ z limitami WIP, bez sprintów"},
+        {"a": "WERYFIKACJA", "c": "'Czy budujemy produkt poprawnie?' (wobec specyfikacji)"},
+        {"a": "WALIDACJA", "c": "'Czy budujemy właściwy produkt?' (wobec potrzeb)"},
+        {"a": "SPRINT", "c": "Odcinek czasu o stałej długości w Scrumie"},
+        {"a": "BACKLOG", "c": "Lista zadań do zrobienia (produktu/sprintu)"},
+        {"a": "AGILE", "c": "Iteracyjne, elastyczne podejście do wytwarzania oprogramowania"}
+      ]
+    },
+    {
+      "title": "11. Metody obliczeniowe",
+      "words": [
+        {"a": "NEWTON", "c": "Metoda kwadratowo zbieżna, wymaga pochodnej"},
+        {"a": "BISEKCJA", "c": "Pewna, wolna metoda 'ciepło-zimno' na przedziale ze zmianą znaku"},
+        {"a": "CZEBYSZEW", "c": "Wielomian ograniczający efekt Rungego (błąd maksymalny)"},
+        {"a": "MANTYSA", "c": "Część znacząca liczby w IEEE 754"},
+        {"a": "JACOBI", "c": "Metoda iteracyjna dla dużych rzadkich układów"},
+        {"a": "PRNG", "c": "Generator pseudolosowy — deterministyczny, ma okres"},
+        {"a": "GAUSS", "c": "Kwadratura z optymalnymi węzłami; dokładna do stopnia 2n−1"},
+        {"a": "CANCELLATION", "c": "Utrata cyfr przy odejmowaniu bliskich liczb float"}
+      ]
+    },
+    {
+      "title": "12. Podstawy sztucznej inteligencji",
+      "words": [
+        {"a": "NADZOROWANE", "c": "Uczenie na danych etykietowanych"},
+        {"a": "KLASTERYZACJA", "c": "Grupowanie danych bez etykiet (k-średnich)"},
+        {"a": "NEURON", "c": "Suma ważona wejść + bias → funkcja aktywacji"},
+        {"a": "RELU", "c": "Popularna funkcja aktywacji w głębokich sieciach"},
+        {"a": "BACKPROP", "c": "Uczenie sieci — gradient regułą łańcuchową wstecz"},
+        {"a": "LSTM", "c": "Wariant RNN z bramkami — leczy zanikający gradient"},
+        {"a": "ASTAR", "c": "Szukanie ścieżki = Dijkstra + heurystyka h(n)"},
+        {"a": "PCA", "c": "Redukcja wymiarowości w uczeniu nienadzorowanym"}
+      ]
+    },
+    {
+      "title": "13. Systemy operacyjne",
+      "words": [
+        {"a": "DEADLOCK", "c": "Zakleszczenie — wszyscy czekają na wszystkich (4 warunki Coffmana)"},
+        {"a": "ROUNDROBIN", "c": "Szeregowanie z kwantem czasu — sprawiedliwe, interaktywne"},
+        {"a": "MUTEX", "c": "Jeden klucz do sekcji krytycznej"},
+        {"a": "FORK", "c": "Tworzy kopię procesu (dziecko), copy-on-write"},
+        {"a": "EXEC", "c": "Podmienia obraz procesu na nowy program"},
+        {"a": "WATEK", "c": "Lekka jednostka wykonania — dzieli pamięć procesu"},
+        {"a": "PAGEFAULT", "c": "Ładowanie brakującej strony z dysku"},
+        {"a": "BANKIER", "c": "Algorytm unikania zakleszczeń"},
+        {"a": "SJF", "c": "Najkrótsze zadanie pierwsze — minimalny średni czas oczekiwania"}
+      ]
+    },
+    {
+      "title": "14. Sieci komputerowe",
+      "words": [
+        {"a": "ARP", "c": "Odwzorowuje IP→MAC przez broadcast w sieci lokalnej"},
+        {"a": "DHCP", "c": "Serwer przydzielający IP, maskę, bramę i DNS"},
+        {"a": "VLAN", "c": "Logiczny podział L2 na domeny rozgłoszeniowe (802.1Q)"},
+        {"a": "OSPF", "c": "Protokół link-state z pełną mapą topologii (Dijkstra)"},
+        {"a": "BGP", "c": "Protokół routingu między systemami autonomicznymi"},
+        {"a": "STP", "c": "Zapobiega pętlom L2, blokuje nadmiarowe łącza"},
+        {"a": "OUI", "c": "Pierwsze 3 bajty MAC — identyfikator producenta"},
+        {"a": "BROADCAST", "c": "MAC same jedynki: FF:FF:FF:FF:FF:FF"},
+        {"a": "ROUTER", "c": "Wybiera trasę regułą najdłuższego pasującego prefiksu"}
+      ]
+    },
+    {
+      "title": "15. Systemy rozproszone",
+      "words": [
+        {"a": "CAP", "c": "Przy podziale sieci wybierasz spójność albo dostępność"},
+        {"a": "MIDDLEWARE", "c": "Warstwa ukrywająca rozproszenie i ułatwiająca komunikację"},
+        {"a": "REST", "c": "Bezstanowy, zasobowy styl usług po HTTP"},
+        {"a": "LAMPORT", "c": "Zegar logiczny dający porządek zgodny z przyczynowością"},
+        {"a": "SOCKET", "c": "Końcówka komunikacji = IP + port"},
+        {"a": "REPLIKACJA", "c": "Wiele kopii danych — podstawa problemu CAP"},
+        {"a": "PRZEZROCZYSTOSC", "c": "Ukrywanie faktu rozproszenia przed użytkownikiem"},
+        {"a": "REAKTYWNY", "c": "System oparty na komunikatach: elastyczny i odporny"}
+      ]
+    },
+    {
+      "title": "16. Teoria automatów i języków formalnych",
+      "words": [
+        {"a": "CHOMSKY", "c": "Hierarchia gramatyk: typy 0-3"},
+        {"a": "CNF", "c": "Postać normalna: A→BC lub A→a (podstawa CYK)"},
+        {"a": "GNF", "c": "Postać normalna zaczynająca prawą stronę terminalem"},
+        {"a": "CYK", "c": "Algorytm rozpoznawania słów O(n³) dla gramatyk w CNF"},
+        {"a": "REGULARNE", "c": "Języki typu 3 — automat skończony"},
+        {"a": "STOSOWY", "c": "Automat rozpoznający języki bezkontekstowe (typ 2)"},
+        {"a": "WIELOZNACZNA", "c": "Gramatyka dająca ≥2 drzewa wywodu dla słowa"},
+        {"a": "TERMINAL", "c": "Symbol końcowy w gramatyce (np. w GNF na początku)"}
+      ]
+    },
+    {
+      "title": "17. Teoria obliczeń i złożoności",
+      "words": [
+        {"a": "STOPU", "c": "Problem nierozstrzygalny — czy program się zatrzyma"},
+        {"a": "TURINGA", "c": "Abstrakcyjny model obliczeń z nieskończoną taśmą"},
+        {"a": "PSPACE", "c": "Klasa pamięci wielomianowej; gry z pełną informacją są tu zupełne"},
+        {"a": "EXPTIME", "c": "Klasa czasu wykładniczego (P ⊊ tej klasy)"},
+        {"a": "SAT", "c": "Pierwszy problem NP-zupełny (Cook-Levin)"},
+        {"a": "REDUKCJA", "c": "Sposób dowodzenia trudności (hardness) problemu"},
+        {"a": "ROZSTRZYGALNY", "c": "Problem, dla którego algorytm zawsze da odpowiedź TAK/NIE"},
+        {"a": "QBF", "c": "Kwantyfikowane formuły — PSPACE-zupełne"}
+      ]
+    },
+    {
+      "title": "18. Teoria współbieżności",
+      "words": [
+        {"a": "PETRIEGO", "c": "Sieć z miejscami (żetony) i tranzycjami (zdarzenia)"},
+        {"a": "ZETON", "c": "'Znacznik' w miejscu sieci Petriego (marking)"},
+        {"a": "TRANZYCJA", "c": "Zdarzenie odpalające, gdy wejścia mają dość żetonów"},
+        {"a": "LAMPORT", "c": "Relacja happened-before daje porządek częściowy"},
+        {"a": "WSPOLBIEZNOSC", "c": "Zarządzanie wieloma zadaniami naraz (nawet na 1 rdzeniu)"},
+        {"a": "ROWNOLEGLOSC", "c": "Faktyczne jednoczesne wykonanie na wielu rdzeniach"},
+        {"a": "RENDEZVOUS", "c": "Synchroniczne spotkanie nadawcy i odbiorcy w CSP"},
+        {"a": "INCYDENCJI", "c": "Macierz C = wyjścia − wejścia w sieci Petriego"}
+      ]
+    }
+  ]
+}
